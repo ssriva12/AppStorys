@@ -3,7 +3,7 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     id("maven-publish")
-
+    id("com.google.devtools.ksp")
 }
 
 android {
@@ -47,6 +47,12 @@ dependencies {
     implementation(libs.androidx.material3)
     implementation(libs.coil.compose)
 
+    // Replace any kapt dependencies with ksp
+    // For example:
+    // kapt("com.google.dagger:hilt-compiler:2.48") becomes:
+    // ksp("com.google.dagger:hilt-compiler:2.48")
+    
+    // Add any other dependencies that need to be converted from kapt to ksp
 }
 
 afterEvaluate {
