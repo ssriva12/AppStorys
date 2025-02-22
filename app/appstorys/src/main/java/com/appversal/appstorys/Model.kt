@@ -40,11 +40,20 @@ data class Campaign(
 data class CampaignDetail(
     val id: String,
     val name: String,
-    val thumbnail: String?,
+    val image: String?,
     val ringColor: String?,
     val nameColor: String?,
     val order: Int?,
     val slides: List<Slide>?
+)
+
+data class Banner(
+    val height: Int,
+    val id: String,
+    val image: String,
+    val link: String,
+    val styling: Styling,
+    val width: Any
 )
 
 data class Slide(

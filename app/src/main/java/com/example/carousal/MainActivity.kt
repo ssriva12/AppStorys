@@ -1,12 +1,10 @@
 package com.example.carousal
 
-import android.R.attr.height
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.activity.viewModels
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.pager.rememberPagerState
@@ -19,6 +17,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModelProvider
 import com.appversal.appstorys.ApiRepository
 import com.appversal.appstorys.AutoSlidingCarousel
+import com.appversal.appstorys.Banner
 import com.appversal.appstorys.CampaignDetail
 import com.appversal.appstorys.CarousalImage
 import com.appversal.appstorys.HomeViewModel
@@ -59,7 +58,7 @@ class MainActivity : ComponentActivity() {
             val pagerState = rememberPagerState(pageCount = {
                 images.count()
             })
-            val bannerUrl by remember { mutableStateOf(banners.firstOrNull { it.campaign_type == "BAN" }?.details as? CampaignDetail) }
+            val bannerUrl by remember { mutableStateOf(banners.firstOrNull { it.campaign_type == "BAN" }?.details as? Banner) }
             Log.d("bannerUrl", bannerUrl.toString())
             CarousalTheme {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
@@ -67,7 +66,7 @@ class MainActivity : ComponentActivity() {
                         if(banners.isNotEmpty()){
                             PinnedBanner(
                                 modifier = Modifier.align(Alignment.Center),
-                                url =   bannerUrl?.thumbnail?:"" ,
+                                url =   bannerUrl?.image?:"" ,
                                 height = 100.dp,
                                 placeHolder = getDrawable(R.drawable.ic_launcher_background)
                             )
