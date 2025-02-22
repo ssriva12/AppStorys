@@ -5,23 +5,23 @@ import kotlinx.coroutines.withContext
 
 class ApiRepository(private val apiService: ApiService) {
 
-    suspend fun getAccessToken(): String? {
+    suspend fun getAccessToken(app_id: String, account_id: String): String? {
         return withContext(Dispatchers.IO) {
             val response = apiService.validateAccount(
                 ValidateAccountRequest(
-                    app_id = "afadf960-3975-4ba2-933b-fac71ccc2002",
-                    account_id = "13555479-077f-445e-87f0-e6eae2e215c5"
+                    app_id = app_id,
+                    account_id = account_id
                 )
             )
             response.access_token
         }
     }
 
-    suspend fun getCampaigns(accessToken: String): List<String> {
+    suspend fun getCampaigns(accessToken: String, screenName: String, positions: List<String>?): List<String> {
         return withContext(Dispatchers.IO) {
             val response = apiService.trackScreen(
                 token = "Bearer $accessToken",
-                request = TrackScreenRequest(screen_name = "Home Screen")
+                request = TrackScreenRequest(screen_name = screenName, positions)
             )
             response.campaigns
         }
@@ -34,6 +34,16 @@ class ApiRepository(private val apiService: ApiService) {
                 request = TrackUserRequest(user_id = "krishna", campaign_list = campaignList)
             )
             response
+        }
+    }
+
+
+    suspend fun trackActions(accessToken: String, actions: TrackAction){
+        withContext(Dispatchers.IO) {
+            apiService.trackAction(
+                token = "Bearer $accessToken",
+                request = actions
+            )
         }
     }
 }

@@ -1,18 +1,29 @@
 package com.appversal.appstorys
 
 import com.google.gson.annotations.JsonAdapter
+import com.google.gson.annotations.SerializedName
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
 
 data class ValidateAccountRequest(
     val app_id: String,
     val account_id: String
 )
 
+data class TrackAction(
+    val campaign_id: String,
+    val user_id: String,
+    val event_type: String
+)
+
+
 data class ValidateAccountResponse(
     val access_token: String
 )
 
 data class TrackScreenRequest(
-    val screen_name: String
+    val screen_name: String,
+    val position_list: List<String>?
 )
 
 data class TrackScreenResponse(
@@ -32,48 +43,44 @@ data class CampaignResponse(
 
 data class Campaign(
     val id: String,
-    val campaign_type: String,
-    @JsonAdapter(CampaignDetailsDeserializer::class)
-    val details: Any?, // Can be List<CampaignDetail> or CampaignDetail
+    @SerializedName("campaign_type") val campaignType: String,
+    val details: Details,
+    val position: String?
 )
 
-data class CampaignDetail(
+sealed class Details
+
+data class BannerDetails(
     val id: String,
-    val name: String,
-    val image: String?,
-    val ringColor: String?,
-    val nameColor: String?,
-    val order: Int?,
-    val slides: List<Slide>?
+    val image: String,
+    val width: Int?,
+    val height: Int?,
+    val link: String,
+    val styling: Styling?
+) : Details()
+
+data class Styling(
+    val isClose: Boolean,
+    val marginBottom: Int,
+    val topLeftBorderRadius: Int,
+    val topRightBorderRadius: Int,
+    val bottomLeftBorderRadius: Int,
+    val bottomRightBorderRadius: Int
 )
 
-data class Banner(
+data class WidgetDetails(
+    val id: String,
+    val type: String,
+    val width: Int,
     val height: Int,
+    @SerializedName("widget_images") val widgetImages: List<WidgetImage>,
+    val campaign: String,
+    val screen: String
+) : Details()
+
+data class WidgetImage(
     val id: String,
     val image: String,
     val link: String,
-    val styling: Styling,
-    val width: Any
-)
-
-data class Slide(
-    val id: String,
-    val parent: String,
-    val image: String?,
-    val video: String?,
-    val link: String?,
-    val button_text: String?,
     val order: Int
-)
-
-data class SurveyDetail(
-    val id: String,
-    val name: String,
-    val styling: SurveyStyling?
-)
-
-data class SurveyStyling(
-    val optionColor: String?,
-    val backgroundColor: String?,
-    val optionTextColor: String?
 )

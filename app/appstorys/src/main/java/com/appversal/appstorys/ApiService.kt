@@ -22,4 +22,10 @@ interface ApiService {
         @Header("Authorization") token: String,
         @Body request: TrackUserRequest
     ): CampaignResponse
+
+    @POST("api/v1/users/track-action/")
+    suspend fun trackAction(
+        @Header("Authorization") token: String,
+        @Body request: TrackAction
+    )
 }
