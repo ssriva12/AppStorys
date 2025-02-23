@@ -71,11 +71,12 @@ data class Styling(
 data class WidgetDetails(
     val id: String,
     val type: String,
-    val width: Int,
-    val height: Int,
+    val width: Int?,
+    val height: Int?,
     @SerializedName("widget_images") val widgetImages: List<WidgetImage>,
     val campaign: String,
-    val screen: String
+    val screen: String,
+    val styling: Styling?
 ) : Details()
 
 data class WidgetImage(

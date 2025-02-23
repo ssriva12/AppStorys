@@ -53,13 +53,23 @@ fun MyApp() {
 
     Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
         Box(modifier = Modifier.fillMaxSize()) {
+            campaignManager.FullWidget(
+                modifier = Modifier.align(Alignment.Center),
+                placeHolder = context.getDrawable(com.example.carousal.R.drawable.ic_launcher_foreground),
+                position = null
+            )
+
+            campaignManager.DoubleWidget(
+                modifier = Modifier.align(Alignment.TopCenter),
+                position = null
+            )
 
 
-            campaignManager.PinnedBanner(
+            /*campaignManager.PinnedBanner(
                 modifier = Modifier.align(Alignment.TopCenter),
                 placeHolder = context.getDrawable(com.example.carousal.R.drawable.ic_launcher_foreground),
                 position = "banner_top"
-            )
+            )*/
 
 
             campaignManager.PinnedBanner(

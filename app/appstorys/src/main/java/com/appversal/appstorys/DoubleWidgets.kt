@@ -1,13 +1,9 @@
 package com.appversal.appstorys
 
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.tween
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.interaction.collectIsDraggedAsState
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -26,8 +22,9 @@ import kotlinx.coroutines.delay
 @Composable
 fun DoubleWidgets(
     modifier: Modifier = Modifier,
-    items: List<Pair<String, String>>,
-    padding: Dp = 16.dp,
+    itemContent: @Composable (index: Int) -> Unit,
+    pagerState: PagerState,
+    itemsCount: Int,
     autoSlideDuration: Long = AUTO_SLIDE_DURATION,
     selectedColor: Color = Color.Black,
     unSelectedColor: Color = Color.Gray,
@@ -35,7 +32,6 @@ fun DoubleWidgets(
     dotSize: Dp = 8.dp,
     spacingBetweenImagesAndDots: Dp = 12.dp // Space between images and dots
 ) {
-    val pagerState = rememberPagerState { items.size }
     val isDragged by pagerState.interactionSource.collectIsDraggedAsState()
 
     // Auto-scroll logic
@@ -43,7 +39,7 @@ fun DoubleWidgets(
         if (!isDragged) {
             while (true) {
                 delay(autoSlideDuration)
-                val nextPage = (pagerState.currentPage + 1) % items.size
+                val nextPage = (pagerState.currentPage + 1) % itemsCount
                 pagerState.animateScrollToPage(nextPage)
             }
         }
@@ -54,26 +50,17 @@ fun DoubleWidgets(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         HorizontalPager(state = pagerState) { page ->
-            val (leftImage, rightImage) = items[page % items.size]
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = padding),
-                horizontalArrangement = Arrangement.spacedBy(padding)
-            ) {
-                ImageCard(imageUrl = leftImage, modifier = Modifier.weight(1f))
-                ImageCard(imageUrl = rightImage, modifier = Modifier.weight(1f))
-            }
+            itemContent(page)
+
         }
 
         // Space between images and dots indicator
         Spacer(modifier = Modifier.height(spacingBetweenImagesAndDots))
-
-        if (items.size > 1) {
+        if (itemsCount > 1) {
             DotsIndicator(
                 modifier = Modifier.padding(horizontal = 8.dp),
-                totalDots = items.size,
-                selectedIndex = pagerState.currentPage % items.size,
+                totalDots = itemsCount,
+                selectedIndex = pagerState.currentPage % itemsCount,
                 dotSize = dotSize,
                 selectedColor = selectedColor,
                 unSelectedColor = unSelectedColor,
@@ -84,7 +71,7 @@ fun DoubleWidgets(
 }
 
 @Composable
-fun ImageCard(imageUrl: String, modifier: Modifier = Modifier) {
+fun ImageCard(modifier: Modifier = Modifier, imageUrl: String, height: Dp = 200.dp) {
     Card(
         colors = CardDefaults.cardColors(containerColor = Color.Transparent),
         modifier = modifier
