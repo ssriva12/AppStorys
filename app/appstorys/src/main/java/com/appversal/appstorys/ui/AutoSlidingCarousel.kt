@@ -1,11 +1,12 @@
-package com.appversal.appstorys
+package com.appversal.appstorys.ui
 
 import android.graphics.drawable.Drawable
-import androidx.annotation.DrawableRes
+import android.os.Build.VERSION.SDK_INT
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.interaction.collectIsDraggedAsState
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -35,16 +36,21 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.Dp
+import coil.ImageLoader
 import coil.compose.AsyncImage
+import coil.compose.rememberAsyncImagePainter
+import coil.decode.GifDecoder
+import coil.decode.ImageDecoderDecoder
 import coil.request.CachePolicy
 import coil.request.ImageRequest
+import com.appversal.appstorys.utils.isGifUrl
 
 
 const val AUTO_SLIDE_DURATION = 2000L
 
 
 @Composable
-fun AutoSlidingCarousel(
+internal fun AutoSlidingCarousel(
     modifier: Modifier = Modifier,
     autoSlideDuration: Long = AUTO_SLIDE_DURATION,
     pagerState: PagerState,
@@ -110,7 +116,7 @@ fun AutoSlidingCarousel(
 
 
 @Composable
-fun DotsIndicator(
+internal fun DotsIndicator(
     modifier: Modifier = Modifier,
     totalDots: Int,
     selectedIndex: Int,
@@ -143,7 +149,7 @@ fun DotsIndicator(
 }
 
 @Composable
-fun PageIndicatorView(
+internal fun PageIndicatorView(
     isSelected: Boolean,
     selectedColor: Color,
     defaultColor: Color,
@@ -198,30 +204,61 @@ fun PageIndicatorView(
 
 
 @Composable
-fun CarousalImage(
+internal fun CarousalImage(
     modifier: Modifier = Modifier,
-    url: String,
+    imageUrl: String,
     contentScale: ContentScale = ContentScale.Crop,
     height: Dp = 200.dp,
     placeHolder: Drawable?
 ) {
     val context = LocalContext.current
-    val imageRequest = ImageRequest.Builder(context)
-        .data(url)
-        .memoryCacheKey(url)
-        .diskCacheKey(url)
-        .placeholder(placeHolder)
-        .error(placeHolder)
-        .fallback(placeHolder)
-        .diskCachePolicy(CachePolicy.ENABLED)
-        .memoryCachePolicy(CachePolicy.ENABLED)
-        .crossfade(true)
-        .build()
 
-    AsyncImage(
-        model = imageRequest,
-        contentDescription = null,
-        contentScale = contentScale,
-        modifier = modifier.height(height)
-    )
+    if (isGifUrl(imageUrl)) {
+        val imageLoader = ImageLoader.Builder(context)
+            .components {
+                if (SDK_INT >= 28) {
+                    add(ImageDecoderDecoder.Factory())
+                } else {
+                    add(GifDecoder.Factory())
+                }
+            }
+            .build()
+
+        val painter = rememberAsyncImagePainter(
+            ImageRequest.Builder(context)
+                .data(data = imageUrl).memoryCacheKey(imageUrl)
+                .diskCacheKey(imageUrl)
+                .diskCachePolicy(CachePolicy.ENABLED)
+                .memoryCachePolicy(CachePolicy.ENABLED)
+                .crossfade(true)
+                .apply(block = { size(coil.size.Size.ORIGINAL) }).build(), imageLoader = imageLoader
+        )
+
+        Image(
+            painter = painter,
+            contentDescription = null,
+            contentScale = contentScale,
+            modifier = modifier.height(height)
+        )
+    }else{
+        val imageRequest = ImageRequest.Builder(context)
+            .data(imageUrl)
+            .memoryCacheKey(imageUrl)
+            .diskCacheKey(imageUrl)
+            .placeholder(placeHolder)
+            .error(placeHolder)
+            .fallback(placeHolder)
+            .diskCachePolicy(CachePolicy.ENABLED)
+            .memoryCachePolicy(CachePolicy.ENABLED)
+            .crossfade(true)
+            .build()
+
+        AsyncImage(
+            model = imageRequest,
+            contentDescription = null,
+            contentScale = contentScale,
+            modifier = modifier.height(height)
+        )
+    }
+
 }

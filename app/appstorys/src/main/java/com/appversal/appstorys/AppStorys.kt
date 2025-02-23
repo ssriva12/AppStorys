@@ -1,7 +1,6 @@
 package com.appversal.appstorys
 
 import android.app.Application
-import android.content.Context
 import android.content.Intent
 import android.graphics.drawable.Drawable
 import android.net.Uri
@@ -16,37 +15,46 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.appversal.appstorys.api.ApiRepository
+import com.appversal.appstorys.api.BannerDetails
+import com.appversal.appstorys.api.Campaign
+import com.appversal.appstorys.api.RetrofitClient
+import com.appversal.appstorys.api.TrackAction
+import com.appversal.appstorys.api.WidgetDetails
+import com.appversal.appstorys.api.WidgetImage
+import com.appversal.appstorys.ui.AutoSlidingCarousel
+import com.appversal.appstorys.ui.CarousalImage
+import com.appversal.appstorys.ui.DoubleWidgets
+import com.appversal.appstorys.ui.ImageCard
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-class CampaignManager private constructor(
+class AppStorys private constructor(
     private val context: Application,
     private val appId: String,
     private val accountId: String,
+    private val userId: String,
+    private val attributes: List<Map<String, Any>>?,
     private val navigateToScreen: (String) -> Unit
 ) {
 
     private val _campaigns = MutableStateFlow<List<Campaign>>(emptyList())
-    val campaigns: StateFlow<List<Campaign>> get() = _campaigns
+    private val campaigns: StateFlow<List<Campaign>> get() = _campaigns
 
     private val _disabledCampaigns = MutableStateFlow<List<String>>(emptyList())
-    val disabledCampaigns: StateFlow<List<String>> get() = _disabledCampaigns
+    private val disabledCampaigns: StateFlow<List<String>> get() = _disabledCampaigns
+
+    private val _impressionsImages = MutableStateFlow<List<String>>(emptyList())
+    private val impressionsImages: StateFlow<List<String>> get() = _impressionsImages
 
 
     private val apiService = RetrofitClient.apiService
@@ -77,7 +85,7 @@ class CampaignManager private constructor(
             val campaignList = repository.getCampaigns(accessToken, currentScreen, null)
             Log.d("campaignList", campaignList.toString())
 
-            val campaignsData = repository.getCampaignData(accessToken, campaignList)
+            val campaignsData = repository.getCampaignData(accessToken, userId, campaignList, attributes)
             Log.d("campaignsData", campaignsData.toString())
 
             _campaigns.emit(campaignsData.campaigns)
@@ -90,12 +98,13 @@ class CampaignManager private constructor(
             if (accessToken.isNotEmpty()) {
                 if (currentScreen != screenName) {
                     _disabledCampaigns.emit(emptyList())
+                    _impressionsImages.emit(emptyList())
                     currentScreen = screenName
                 }
                 val campaignList = repository.getCampaigns(accessToken, currentScreen, positionList)
                 Log.d("campaignList", campaignList.toString())
 
-                val campaignsData = repository.getCampaignData(accessToken, campaignList)
+                val campaignsData = repository.getCampaignData(accessToken, userId, campaignList, attributes)
                 Log.d("campaignsData", campaignsData.toString())
 
                 _campaigns.emit(campaignsData.campaigns)
@@ -115,8 +124,6 @@ class CampaignManager private constructor(
         val campaignsData = campaigns.collectAsStateWithLifecycle()
         val disabledCampaigns = disabledCampaigns.collectAsStateWithLifecycle()
 
-        var sendImpression by remember { mutableStateOf(false) }
-
         val campaign = position?.let { pos -> campaignsData.value.filter { it.position == pos } }
             ?.firstOrNull { it.campaignType == "BAN" }
             ?: campaignsData.value.firstOrNull { it.campaignType == "BAN" }
@@ -132,22 +139,19 @@ class CampaignManager private constructor(
             val heightInDp: Dp? = bannerDetails.height?.dp
 
             LaunchedEffect(Unit) {
-                if (!sendImpression) {
-                    sendImpression = true
-                    campaign?.id?.let {
-                        trackCampaignActions(it, "IMP")
-                    }
+                campaign?.id?.let {
+                    trackCampaignActions(it, "IMP")
                 }
+
             }
 
-            PinnedBanner(
+            com.appversal.appstorys.ui.PinnedBanner(
                 modifier = modifier.clickable {
                     campaign?.id?.let {
                         clickEvent(url = bannerDetails.link, campaignId = it)
-                        trackCampaignActions(it, "CLK")
                     }
                 },
-                url = bannerUrl,
+                imageUrl = bannerUrl,
                 width = bannerDetails.width?.dp,
                 exitIcon = style?.isClose ?: false,
                 exitUnit = {
@@ -175,6 +179,41 @@ class CampaignManager private constructor(
     }
 
     @Composable
+    fun Widget(
+        modifier: Modifier = Modifier,
+        contentScale: ContentScale = ContentScale.Crop,
+        staticHeight: Dp = 200.dp,
+        placeHolder: Drawable?,
+        position: String?
+    ) {
+        val campaignsData = campaigns.collectAsStateWithLifecycle()
+        val campaign = position?.let { pos -> campaignsData.value.filter { it.position == pos } }
+            ?.firstOrNull { it.campaignType == "WID" && it.details is WidgetDetails }
+            ?: campaignsData.value.firstOrNull { it.campaignType == "WID" && it.details is WidgetDetails }
+        if (campaign != null) {
+            val widgetDetails = campaign?.details as WidgetDetails ?: null
+
+            if (widgetDetails?.type == "full") (
+                    FullWidget(
+                        modifier = modifier,
+                        staticHeight = staticHeight,
+                        placeHolder = placeHolder,
+                        position = position
+                    )
+
+                    ) else if (widgetDetails?.type == "half") {
+                DoubleWidget(
+                    modifier = modifier,
+                    staticHeight = staticHeight,
+                    position = position
+                )
+            }
+
+        }
+
+    }
+
+    @Composable
     fun FullWidget(
         modifier: Modifier = Modifier,
         contentScale: ContentScale = ContentScale.Crop,
@@ -185,15 +224,13 @@ class CampaignManager private constructor(
         val campaignsData = campaigns.collectAsStateWithLifecycle()
         val disabledCampaigns = disabledCampaigns.collectAsStateWithLifecycle()
 
-        var sendImpression by remember { mutableStateOf(false) }
-        val campaign = position?.let { pos -> campaignsData.value.filter { it.position == pos } }
-            ?.firstOrNull { it.campaignType == "WID" }
-            ?: campaignsData.value.firstOrNull { it.campaignType == "WID" }
-        Log.i("CampaignDetailsWid", campaign.toString())
-        val widgetDetails = when (val details = campaign?.details) {
-            is WidgetDetails -> details
-            else -> null
-        }
+        val campaigns = position?.let { pos -> campaignsData.value.filter { it.position == pos } }
+            ?.filter { it.campaignType == "WID" && it.details is WidgetDetails }
+            ?: campaignsData.value.filter { it.campaignType == "WID" && it.details is WidgetDetails }
+
+        val campaign = campaigns.firstOrNull { (it.details as WidgetDetails).type == "full" }
+        val widgetDetails =
+            if (campaign?.details != null) campaign.details as WidgetDetails else null
 
         if (widgetDetails != null && !disabledCampaigns.value.contains(campaign?.id) && widgetDetails.type == "full") {
             val pagerState = rememberPagerState(pageCount = {
@@ -201,12 +238,13 @@ class CampaignManager private constructor(
             })
             val heightInDp: Dp? = widgetDetails.height?.dp
 
-            LaunchedEffect(Unit) {
-                if (!sendImpression) {
-                    sendImpression = true
-                    campaign?.id?.let {
-                        trackCampaignActions(it, "IMP")
-                    }
+            LaunchedEffect(pagerState.currentPage) {
+                campaign?.id?.let {
+                    trackCampaignActions(
+                        it,
+                        "IMP",
+                        widgetDetails.widgetImages[pagerState.currentPage].id
+                    )
                 }
             }
 
@@ -220,13 +258,13 @@ class CampaignManager private constructor(
                             campaign?.id?.let {
                                 clickEvent(
                                     url = widgetDetails.widgetImages[index].link,
-                                    campaignId = it
+                                    campaignId = it,
+                                    widgetImageId = widgetDetails.widgetImages[index].id
                                 )
-                                trackCampaignActions(it, "CLK")
                             }
                         },
                         contentScale = contentScale,
-                        url = widgetDetails.widgetImages[index].image,
+                        imageUrl = widgetDetails.widgetImages[index].image,
                         placeHolder = placeHolder,
                         height = heightInDp ?: staticHeight,
                     )
@@ -246,15 +284,14 @@ class CampaignManager private constructor(
         val campaignsData = campaigns.collectAsStateWithLifecycle()
         val disabledCampaigns = disabledCampaigns.collectAsStateWithLifecycle()
 
-        var sendImpression by remember { mutableStateOf(false) }
-        val campaign = position?.let { pos -> campaignsData.value.filter { it.position == pos } }
-            ?.firstOrNull { it.campaignType == "WID" }
-            ?: campaignsData.value.firstOrNull { it.campaignType == "WID" }
-        Log.i("CampaignDetailsWid", campaign.toString())
-        val widgetDetails = when (val details = campaign?.details) {
-            is WidgetDetails -> details
-            else -> null
-        }
+        val campaigns = position?.let { pos -> campaignsData.value.filter { it.position == pos } }
+            ?.filter { it.campaignType == "WID" && it.details is WidgetDetails }
+            ?: campaignsData.value.filter { it.campaignType == "WID" && it.details is WidgetDetails }
+
+        val campaign = campaigns.firstOrNull { (it.details as WidgetDetails).type == "half" }
+        val widgetDetails =
+            if (campaign?.details != null) campaign.details as WidgetDetails else null
+
 
         if (widgetDetails != null && !disabledCampaigns.value.contains(campaign?.id) && widgetDetails.type == "half") {
 
@@ -263,13 +300,25 @@ class CampaignManager private constructor(
             val pagerState = rememberPagerState(pageCount = {
                 widgetImagesPairs.count()
             })
-            LaunchedEffect(Unit) {
-                if (!sendImpression) {
-                    sendImpression = true
-                    campaign?.id?.let {
-                        trackCampaignActions(it, "IMP")
-                    }
+
+            LaunchedEffect(pagerState.currentPage) {
+                campaign?.id?.let {
+                    trackCampaignActions(
+                        it,
+                        "IMP",
+                        widgetImagesPairs[pagerState.currentPage].first.id
+                    )
                 }
+
+                campaign?.id?.let {
+
+                    trackCampaignActions(
+                        it,
+                        "IMP",
+                        widgetImagesPairs[pagerState.currentPage].second.id
+                    )
+                }
+
             }
 
             DoubleWidgets(
@@ -289,8 +338,11 @@ class CampaignManager private constructor(
                                 .weight(1f)
                                 .clickable {
                                     campaign?.id?.let {
-                                        clickEvent(url = leftImage.link, campaignId = it)
-                                        trackCampaignActions(it, "CLK")
+                                        clickEvent(
+                                            url = leftImage.link,
+                                            campaignId = it,
+                                            widgetImageId = leftImage.id
+                                        )
                                     }
                                 },
                             imageUrl = leftImage.image,
@@ -302,8 +354,11 @@ class CampaignManager private constructor(
                                 .weight(1f)
                                 .clickable {
                                     campaign?.id?.let {
-                                        clickEvent(url = rightImage.link, campaignId = it)
-                                        trackCampaignActions(it, "CLK")
+                                        clickEvent(
+                                            url = rightImage.link,
+                                            campaignId = it,
+                                            widgetImageId = rightImage.id
+                                        )
                                     }
                                 },
                             imageUrl = rightImage.image,
@@ -315,14 +370,15 @@ class CampaignManager private constructor(
         }
     }
 
-    private fun clickEvent(url: String, campaignId: String) {
+    private fun clickEvent(url: String, campaignId: String, widgetImageId: String? = null) {
         if (!isValidUrl(url)) {
             navigateToScreen(url)
         } else {
             openUrl(url)
         }
 
-        trackCampaignActions(campaignId, "CLK")
+        Log.i("ClickImageId", widgetImageId.toString())
+        trackCampaignActions(campaignId, "CLK", widgetImageId)
 
     }
 
@@ -337,9 +393,33 @@ class CampaignManager private constructor(
         return widgetImagePairs
     }
 
-    private fun trackCampaignActions(campId: String, eventType: String) {
+    private fun trackCampaignActions(
+        campId: String,
+        eventType: String,
+        widgetImageId: String? = null
+    ) {
         coroutineScope.launch {
-            repository.trackActions(accessToken, TrackAction(campId, accountId, eventType))
+            if (eventType != "CLK"){
+                if (widgetImageId != null && !impressionsImages.value.contains(widgetImageId)) {
+                    val impressions = ArrayList(impressionsImages.value)
+                    impressions.add(widgetImageId)
+                    _impressionsImages.emit(impressions)
+                    repository.trackActions(
+                        accessToken,
+                        TrackAction(campId, userId, eventType, widgetImageId)
+                    )
+                } else if (!impressionsImages.value.contains(campId)){
+                    val impressions = ArrayList(impressionsImages.value)
+                    impressions.add(campId)
+                    _impressionsImages.emit(impressions)
+                    repository.trackActions(
+                        accessToken,
+                        TrackAction(campId, userId, eventType, null)
+                    )
+                }
+            }else{
+                repository.trackActions(accessToken, TrackAction(campId, userId, eventType, widgetImageId))
+            }
         }
     }
 
@@ -356,20 +436,24 @@ class CampaignManager private constructor(
 
     companion object {
         @Volatile
-        private var instance: CampaignManager? = null
+        private var instance: AppStorys? = null
 
         fun getInstance(
             context: Application,
             appId: String,
             accountId: String,
+            userId: String,
+            attributes: List<Map<String, Any>>? = null,
             navigateToScreen: (String) -> Unit
-        ): CampaignManager {
+        ): AppStorys {
             return instance ?: synchronized(this) {
-                instance ?: CampaignManager(
-                    context,
-                    appId,
-                    accountId,
-                    navigateToScreen
+                instance ?: AppStorys(
+                    context = context,
+                    appId = appId,
+                    accountId = accountId,
+                    userId = userId,
+                    navigateToScreen = navigateToScreen,
+                    attributes = attributes
                 ).also { instance = it }
             }
         }

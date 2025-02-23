@@ -1,9 +1,9 @@
-package com.appversal.appstorys
+package com.appversal.appstorys.api
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-class ApiRepository(private val apiService: ApiService) {
+internal class ApiRepository(private val apiService: ApiService) {
 
     suspend fun getAccessToken(app_id: String, account_id: String): String? {
         return withContext(Dispatchers.IO) {
@@ -27,11 +27,11 @@ class ApiRepository(private val apiService: ApiService) {
         }
     }
 
-    suspend fun getCampaignData(accessToken: String, campaignList: List<String>): CampaignResponse {
+    suspend fun getCampaignData(accessToken: String, userId: String, campaignList: List<String>, attributes: List<Map<String, Any>>?): CampaignResponse {
         return withContext(Dispatchers.IO) {
             val response = apiService.trackUser(
                 token = "Bearer $accessToken",
-                request = TrackUserRequest(user_id = "krishna", campaign_list = campaignList)
+                request = TrackUserRequest(user_id = userId, campaign_list = campaignList, attributes = attributes)
             )
             response
         }

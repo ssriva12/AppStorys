@@ -1,9 +1,6 @@
-package com.appversal.appstorys
+package com.appversal.appstorys.api
 
-import com.google.gson.annotations.JsonAdapter
 import com.google.gson.annotations.SerializedName
-import kotlinx.serialization.SerialName
-import kotlinx.serialization.Serializable
 
 data class ValidateAccountRequest(
     val app_id: String,
@@ -13,7 +10,8 @@ data class ValidateAccountRequest(
 data class TrackAction(
     val campaign_id: String,
     val user_id: String,
-    val event_type: String
+    val event_type: String,
+    val widget_image: String?
 )
 
 
@@ -32,7 +30,8 @@ data class TrackScreenResponse(
 
 data class TrackUserRequest(
     val user_id: String,
-    val campaign_list: List<String>
+    val campaign_list: List<String>,
+     val attributes: List<Map<String, Any>>?
 )
 //Campaign Data
 
@@ -44,7 +43,7 @@ data class CampaignResponse(
 data class Campaign(
     val id: String,
     @SerializedName("campaign_type") val campaignType: String,
-    val details: Details,
+    val details: Details?,
     val position: String?
 )
 

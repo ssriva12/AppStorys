@@ -1,4 +1,4 @@
-package com.appversal.appstorys
+package com.appversal.appstorys.api
 
 import retrofit2.http.Body
 import retrofit2.http.Header
@@ -20,7 +20,8 @@ interface ApiService {
     @POST("api/v1/users/track-user/")
     suspend fun trackUser(
         @Header("Authorization") token: String,
-        @Body request: TrackUserRequest
+        @Body request: TrackUserRequest,
+
     ): CampaignResponse
 
     @POST("api/v1/users/track-action/")

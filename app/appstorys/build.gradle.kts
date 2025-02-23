@@ -54,6 +54,7 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.1")
     implementation(libs.gson)
     implementation(libs.kotlinx.serialization.json)
+    implementation(libs.coil.gif)
 
 }
 

@@ -1,11 +1,11 @@
-package com.appversal.appstorys
+package com.appversal.appstorys.api
 
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 
-object RetrofitClient {
+internal object RetrofitClient {
     private const val BASE_URL = "https://backend.appstorys.com/"
 
     private val gson: Gson = GsonBuilder()
