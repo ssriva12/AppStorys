@@ -16,9 +16,9 @@ class App : Application() {
         // Initialize CampaignManager with userId and appId
         appStorys = AppStorys.getInstance(
             this,
-            appId = "afadf960-3975-4ba2-933b-fac71ccc2002",
-            accountId = "13555479-077f-445e-87f0-e6eae2e215c5",
-            userId = "sbcubsdvid",
+            appId = "afadf960-3975-4ba2-933b-fac71ccc2002", // Replace with App Id
+            accountId = "13555479-077f-445e-87f0-e6eae2e215c5", // Replace with Account Id
+            userId = "sbcubsdvid",// Replace with User Id
             attributes = attributes,
             navigateToScreen =
             {
@@ -27,6 +27,7 @@ class App : Application() {
     }
 
 
+    //For Deeplinking with NavHost
     fun navigateToScreen(name: String) {
 
     }

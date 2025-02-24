@@ -1,0 +1,360 @@
+package com.appversal.appstorys.ui
+
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+
+// Data classes
+data class CsatFeedback(
+    val rating: Int,
+    val feedbackOption: String? = null,
+    val additionalComments: String = ""
+)
+
+@Composable
+fun CsatDialog(
+    onDismiss: () -> Unit,
+    onSubmitFeedback: (CsatFeedback) -> Unit
+) {
+    // Local content
+    val localContent = remember {
+        mapOf(
+            "title" to "We'd love your feedback!",
+            "description" to "This will help us improve your experience",
+            "thankyouText" to "Thank you for your feedback!",
+            "thankyouDescription" to "We appreciate you taking the time to share your thoughts.",
+            "rateUsText" to "Rate Us!",
+            "feedbackPrompt" to "Please tell us what went wrong."
+        )
+    }
+
+    // Styling
+    val styling = remember {
+        mapOf(
+            "csatBackgroundColor" to Color.White,
+            "csatTitleColor" to Color.Black,
+            "csatDescriptionTextColor" to Color(0xFF504F58),
+            "csatCtaBackgroundColor" to Color(0xFF007AFF),
+            "csatCtaTextColor" to Color.White,
+            "csatSelectedOptionBackgroundColor" to Color(0xFFE3F2FD),
+            "csatOptionStrokeColor" to Color(0xFFCCCCCC),
+            "csatSelectedOptionTextColor" to Color(0xFF007AFF),
+            "csatOptionTextColor" to Color.Black
+        )
+    }
+
+    // Feedback options
+    val feedbackOptions = remember {
+        listOf(
+            "Poor UI/UX",
+            "App Performance",
+            "Missing Features",
+            "Other Issues"
+        )
+    }
+
+    var selectedStars by remember { mutableStateOf(0) }
+    var showThanks by remember { mutableStateOf(false) }
+    var showFeedback by remember { mutableStateOf(false) }
+    var selectedOption by remember { mutableStateOf<String?>(null) }
+    var additionalComments by remember { mutableStateOf("") }
+    val scope = rememberCoroutineScope()
+
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp),
+        shape = RoundedCornerShape(24.dp),
+        color = styling["csatBackgroundColor"]!!,
+        shadowElevation = 8.dp
+    ) {
+        Box {
+            // Close button
+            IconButton(
+                onClick = onDismiss,
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(8.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Close,
+                    contentDescription = "Close",
+                    tint = styling["csatTitleColor"]!!
+                )
+            }
+
+            AnimatedVisibility(
+                visible = !showThanks,
+                enter = fadeIn(),
+                exit = fadeOut()
+            ) {
+                MainContent(
+                    localContent = localContent,
+                    styling = styling,
+                    selectedStars = selectedStars,
+                    showFeedback = showFeedback,
+                    feedbackOptions = feedbackOptions,
+                    selectedOption = selectedOption,
+                    additionalComments = additionalComments,
+                    onStarSelected = { stars ->
+                        selectedStars = stars
+                        when {
+                            stars >= 4 -> {
+                                scope.launch {
+                                    delay(1000)
+                                    onSubmitFeedback(CsatFeedback(rating = stars))
+                                    showThanks = true
+                                }
+                            }
+                            else -> showFeedback = true
+                        }
+                    },
+                    onOptionSelected = { selectedOption = it },
+                    onCommentsChanged = { additionalComments = it },
+                    onSubmit = {
+                        onSubmitFeedback(
+                            CsatFeedback(
+                                rating = selectedStars,
+                                feedbackOption = selectedOption,
+                                additionalComments = additionalComments
+                            )
+                        )
+                        showThanks = true
+                    }
+                )
+            }
+
+            AnimatedVisibility(
+                visible = showThanks,
+                enter = fadeIn(),
+                exit = fadeOut()
+            ) {
+                ThankYouContent(
+                    localContent = localContent,
+                    styling = styling,
+                    onDone = onDismiss
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun MainContent(
+    localContent: Map<String, String>,
+    styling: Map<String, Color>,
+    selectedStars: Int,
+    showFeedback: Boolean,
+    feedbackOptions: List<String>,
+    selectedOption: String?,
+    additionalComments: String,
+    onStarSelected: (Int) -> Unit,
+    onOptionSelected: (String) -> Unit,
+    onCommentsChanged: (String) -> Unit,
+    onSubmit: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .padding(24.dp)
+    ) {
+        Text(
+            text = localContent["title"]!!,
+            fontSize = 22.sp,
+            fontWeight = FontWeight.Bold,
+            color = styling["csatTitleColor"]!!
+        )
+
+        Spacer(modifier = Modifier.height(4.dp))
+
+        Text(
+            text = localContent["description"]!!,
+            color = styling["csatDescriptionTextColor"]!!
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Stars
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.Start
+        ) {
+            repeat(5) { index ->
+                Icon(
+                    imageVector = Icons.Default.Star,
+                    contentDescription = "Star ${index + 1}",
+                    tint = if (index < selectedStars) Color(0xFFFFC107) else Color.Gray,
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clickable { onStarSelected(index + 1) }
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+            }
+        }
+
+        if (!showFeedback) {
+            Text(
+                text = localContent["rateUsText"]!!,
+                modifier = Modifier.padding(start = 8.dp, top = 8.dp),
+                fontSize = 16.sp
+            )
+        }
+
+        AnimatedVisibility(visible = showFeedback) {
+            FeedbackContent(
+                localContent = localContent,
+                styling = styling,
+                feedbackOptions = feedbackOptions,
+                selectedOption = selectedOption,
+                additionalComments = additionalComments,
+                onOptionSelected = onOptionSelected,
+                onCommentsChanged = onCommentsChanged,
+                onSubmit = onSubmit
+            )
+        }
+    }
+}
+
+@Composable
+private fun FeedbackContent(
+    localContent: Map<String, String>,
+    styling: Map<String, Color>,
+    feedbackOptions: List<String>,
+    selectedOption: String?,
+    additionalComments: String,
+    onOptionSelected: (String) -> Unit,
+    onCommentsChanged: (String) -> Unit,
+    onSubmit: () -> Unit
+) {
+    Column(
+        modifier = Modifier.padding(top = 16.dp)
+    ) {
+        Text(
+            text = localContent["feedbackPrompt"]!!,
+            color = styling["csatTitleColor"]!!
+        )
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // Feedback options
+        feedbackOptions.forEach { option ->
+            val isSelected = option == selectedOption
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 4.dp)
+                    .border(
+                        width = 1.dp,
+                        color = styling["csatOptionStrokeColor"]!!,
+                        shape = RoundedCornerShape(24.dp)
+                    )
+                    .clickable { onOptionSelected(option) },
+                color = if (isSelected) styling["csatSelectedOptionBackgroundColor"]!!
+                else styling["csatBackgroundColor"]!!,
+                shape = RoundedCornerShape(24.dp)
+            ) {
+                Text(
+                    text = option,
+                    modifier = Modifier.padding(12.dp),
+                    color = if (isSelected) styling["csatSelectedOptionTextColor"]!!
+                    else styling["csatOptionTextColor"]!!
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // Additional comments
+        TextField(
+            value = additionalComments,
+            onValueChange = onCommentsChanged,
+            modifier = Modifier.fillMaxWidth(),
+            placeholder = { Text("Additional comments") },
+            colors = TextFieldDefaults.colors(
+                unfocusedContainerColor = Color.Transparent,
+                focusedContainerColor = Color.Transparent
+            )
+        )
+
+        Spacer(modifier = Modifier.height(18.dp))
+
+        Button(
+            onClick = onSubmit,
+            modifier = Modifier.align(Alignment.CenterHorizontally),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = styling["csatCtaBackgroundColor"]!!
+            )
+        ) {
+            Text("Submit")
+        }
+    }
+}
+
+@Composable
+private fun ThankYouContent(
+    localContent: Map<String, String>,
+    styling: Map<String, Color>,
+    onDone: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .padding(24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        AsyncImage(
+            model = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTwlQ-xYqAIcjylz3NUGJ_jcdRmdzk_vMae0w&s",
+            contentDescription = "Thank you",
+            modifier = Modifier.size(66.dp),
+            contentScale = ContentScale.Fit
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Text(
+            text = localContent["thankyouText"]!!,
+            fontSize = 20.sp,
+            fontWeight = FontWeight.Bold,
+            color = styling["csatTitleColor"]!!
+        )
+
+        Spacer(modifier = Modifier.height(4.dp))
+
+        Text(
+            text = localContent["thankyouDescription"]!!,
+            color = styling["csatDescriptionTextColor"]!!,
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Button(
+            onClick = onDone,
+            colors = ButtonDefaults.buttonColors(
+                containerColor = styling["csatCtaBackgroundColor"]!!
+            )
+        ) {
+            Text("Done")
+        }
+    }
+}
