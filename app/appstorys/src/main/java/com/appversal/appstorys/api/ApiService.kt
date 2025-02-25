@@ -29,4 +29,10 @@ interface ApiService {
         @Header("Authorization") token: String,
         @Body request: TrackAction
     )
+
+    @POST("api/v1/campaigns/capture-csat-response/")
+    suspend fun sendCSATResponse(
+        @Header("Authorization") token: String,
+        @Body request: CsatFeedbackPostRequest
+    )
 }

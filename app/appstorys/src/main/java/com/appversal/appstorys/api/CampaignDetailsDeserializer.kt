@@ -5,23 +5,37 @@ import com.google.gson.JsonDeserializer
 import com.google.gson.JsonElement
 import java.lang.reflect.Type
 
-internal class CampaignDetailsDeserializer : JsonDeserializer<Details> {
-
+internal class CampaignResponseDeserializer : JsonDeserializer<CampaignResponse> {
     override fun deserialize(
         json: JsonElement, typeOfT: Type, context: JsonDeserializationContext
-    ): Details? {
-        try {
-            val jsonObject = json.asJsonObject
+    ): CampaignResponse {
+        val jsonObject = json.asJsonObject
 
-            return if (jsonObject.has("widget_images")) {
-                context.deserialize(json, WidgetDetails::class.java)
-            } else {
-                context.deserialize(json, BannerDetails::class.java)
+        val userId = jsonObject.get("user_id").asString
+        val campaignsJsonArray = jsonObject.getAsJsonArray("campaigns")
+
+        val campaigns = campaignsJsonArray.map { campaignElement ->
+            val campaignObject = campaignElement.asJsonObject
+            val campaignType = campaignObject.get("campaign_type")?.asString ?: ""
+
+            val detailsJson = campaignObject.get("details")
+
+            val details: Details? = when (campaignType) {
+                "FLT" -> context.deserialize(detailsJson, FloaterDetails::class.java)
+                "CSAT" -> context.deserialize(detailsJson, CSATDetails::class.java)
+                "WIDGET" -> context.deserialize(detailsJson, WidgetDetails::class.java)
+                "BAN" -> context.deserialize(detailsJson, BannerDetails::class.java)
+                else -> null
             }
-        }catch (e: Exception){
 
+            Campaign(
+                id = campaignObject.get("id").asString,
+                campaignType = campaignType,
+                details = details,
+                position = if (campaignObject.get("position").toString().isNotEmpty()) campaignObject.get("position")?.toString() else null
+            )
         }
-        return null
+
+        return CampaignResponse(userId, campaigns)
     }
 }
-

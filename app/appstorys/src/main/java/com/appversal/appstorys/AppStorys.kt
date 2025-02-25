@@ -6,34 +6,54 @@ import android.graphics.drawable.Drawable
 import android.net.Uri
 import android.util.Log
 import android.util.Patterns
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.ripple.rememberRipple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.appversal.appstorys.api.ApiRepository
 import com.appversal.appstorys.api.BannerDetails
+import com.appversal.appstorys.api.CSATDetails
 import com.appversal.appstorys.api.Campaign
+import com.appversal.appstorys.api.CsatFeedbackPostRequest
+import com.appversal.appstorys.api.FloaterDetails
 import com.appversal.appstorys.api.RetrofitClient
 import com.appversal.appstorys.api.TrackAction
 import com.appversal.appstorys.api.WidgetDetails
 import com.appversal.appstorys.api.WidgetImage
 import com.appversal.appstorys.ui.AutoSlidingCarousel
 import com.appversal.appstorys.ui.CarousalImage
+import com.appversal.appstorys.ui.CsatDialog
 import com.appversal.appstorys.ui.DoubleWidgets
 import com.appversal.appstorys.ui.ImageCard
+import com.appversal.appstorys.ui.OverlayFloater
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -56,11 +76,12 @@ class AppStorys private constructor(
     private val _impressionsImages = MutableStateFlow<List<String>>(emptyList())
     private val impressionsImages: StateFlow<List<String>> get() = _impressionsImages
 
-
     private val apiService = RetrofitClient.apiService
     private val repository = ApiRepository(apiService)
     private var accessToken = ""
     private var currentScreen = ""
+
+    private var showCsat = false
 
     private var isDataFetched = false
     private val coroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -85,7 +106,8 @@ class AppStorys private constructor(
             val campaignList = repository.getCampaigns(accessToken, currentScreen, null)
             Log.d("campaignList", campaignList.toString())
 
-            val campaignsData = repository.getCampaignData(accessToken, userId, campaignList, attributes)
+            val campaignsData =
+                repository.getCampaignData(accessToken, userId, campaignList, attributes)
             Log.d("campaignsData", campaignsData.toString())
 
             _campaigns.emit(campaignsData.campaigns)
@@ -104,12 +126,122 @@ class AppStorys private constructor(
                 val campaignList = repository.getCampaigns(accessToken, currentScreen, positionList)
                 Log.d("campaignList", campaignList.toString())
 
-                val campaignsData = repository.getCampaignData(accessToken, userId, campaignList, attributes)
+                val campaignsData =
+                    repository.getCampaignData(accessToken, userId, campaignList, attributes)
                 Log.d("campaignsData", campaignsData.toString())
 
                 _campaigns.emit(campaignsData.campaigns)
                 Log.d("CampaignsValue", _campaigns.toString())
             }
+        }
+    }
+
+    @Composable
+    fun CSAT(
+        modifier: Modifier = Modifier,
+        displayDelaySeconds: Long = 10,
+        position: String?
+    ) {
+        if (!showCsat) {
+            val campaignsData = campaigns.collectAsStateWithLifecycle()
+
+            val campaign =
+                position?.let { pos -> campaignsData.value.filter { it.position == pos } }
+                    ?.firstOrNull { it.campaignType == "CSAT" }
+                    ?: campaignsData.value.firstOrNull { it.campaignType == "CSAT" }
+
+            val csatDetails = when (val details = campaign?.details) {
+                is CSATDetails -> details
+                else -> null
+            }
+
+            if (csatDetails != null) {
+                val style = csatDetails.styling
+                var isVisibleState by remember { mutableStateOf(false) }
+                val updatedDelay by rememberUpdatedState(
+                    style?.displayDelay?.toLong() ?: displayDelaySeconds
+                )
+
+                LaunchedEffect(Unit) {
+                    campaign?.id?.let {
+                        trackCampaignActions(it, "IMP")
+                    }
+                    delay(updatedDelay * 1000)
+                    isVisibleState = true
+                }
+
+                AnimatedVisibility(
+                    modifier = modifier,
+                    visible = isVisibleState,
+                    enter = slideInVertically { it },
+                    exit = slideOutVertically { it }
+                ) {
+                    CsatDialog(
+                        onDismiss = {
+                            isVisibleState = false
+                            coroutineScope.launch {
+                                delay(500L)
+                                showCsat = true
+                            }
+                        },
+                        onSubmitFeedback = { feedback ->
+                            coroutineScope.launch{
+                                repository.captureCSATResponse(
+                                    accessToken,
+                                    CsatFeedbackPostRequest(
+                                        user_id = userId,
+                                        csat = csatDetails.id,
+                                        rating = feedback.rating,
+                                        additionalComments = feedback.additionalComments,
+                                        feedbackOption = feedback.feedbackOption
+                                    )
+
+                                )
+                            }
+                            println("Received feedback: $feedback")
+                        },
+                        csatDetails = csatDetails
+                    )
+                }
+            }
+        }
+    }
+
+    @Composable
+    fun Floater(
+        modifier: Modifier = Modifier,
+        position: String? = null
+    ) {
+        val campaignsData = campaigns.collectAsStateWithLifecycle()
+
+        val campaign = position?.let { pos -> campaignsData.value.filter { it.position == pos } }
+            ?.firstOrNull { it.campaignType == "FLT" }
+            ?: campaignsData.value.firstOrNull { it.campaignType == "FLT" }
+
+        val floaterDetails = when (val details = campaign?.details) {
+            is FloaterDetails -> details
+            else -> null
+        }
+
+        if (floaterDetails != null) {
+            LaunchedEffect(Unit) {
+                campaign?.id?.let {
+                    trackCampaignActions(it, "IMP")
+                }
+
+            }
+
+            OverlayFloater(
+                modifier = modifier,
+                onClick = {
+                    campaign?.id?.let {
+                        clickEvent(url = floaterDetails.link, campaignId = it)
+                    }
+                },
+                image = floaterDetails.image,
+                height = if (floaterDetails.height != null) floaterDetails.height.dp else 60.dp,
+                width = if (floaterDetails.width != null) floaterDetails.width.dp else 60.dp
+            )
         }
     }
 
@@ -197,6 +329,7 @@ class AppStorys private constructor(
                     FullWidget(
                         modifier = modifier,
                         staticHeight = staticHeight,
+                        contentScale = contentScale,
                         placeHolder = placeHolder,
                         position = position
                     )
@@ -377,7 +510,6 @@ class AppStorys private constructor(
             openUrl(url)
         }
 
-        Log.i("ClickImageId", widgetImageId.toString())
         trackCampaignActions(campaignId, "CLK", widgetImageId)
 
     }
@@ -399,7 +531,7 @@ class AppStorys private constructor(
         widgetImageId: String? = null
     ) {
         coroutineScope.launch {
-            if (eventType != "CLK"){
+            if (eventType != "CLK") {
                 if (widgetImageId != null && !impressionsImages.value.contains(widgetImageId)) {
                     val impressions = ArrayList(impressionsImages.value)
                     impressions.add(widgetImageId)
@@ -408,7 +540,7 @@ class AppStorys private constructor(
                         accessToken,
                         TrackAction(campId, userId, eventType, widgetImageId)
                     )
-                } else if (!impressionsImages.value.contains(campId)){
+                } else if (!impressionsImages.value.contains(campId)) {
                     val impressions = ArrayList(impressionsImages.value)
                     impressions.add(campId)
                     _impressionsImages.emit(impressions)
@@ -417,8 +549,11 @@ class AppStorys private constructor(
                         TrackAction(campId, userId, eventType, null)
                     )
                 }
-            }else{
-                repository.trackActions(accessToken, TrackAction(campId, userId, eventType, widgetImageId))
+            } else {
+                repository.trackActions(
+                    accessToken,
+                    TrackAction(campId, userId, eventType, widgetImageId)
+                )
             }
         }
     }

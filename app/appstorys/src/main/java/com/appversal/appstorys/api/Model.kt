@@ -84,3 +84,60 @@ data class WidgetImage(
     val link: String,
     val order: Int
 )
+
+data class CSATDetails(
+    val id: String,
+    val title: String,
+    val height: Int?,
+    val width: Int?,
+    val styling: CSATStyling?,
+    val thankyouImage: String,
+    val thankyouText: String,
+    val thankyouDescription: String,
+    @SerializedName("description_text") val descriptionText: String,
+    @SerializedName("feedback_option") val feedbackOption: FeedbackOption,
+    val campaign: String,
+    val link: String
+) : Details()
+
+data class FloaterDetails(
+    val id: String,
+    val image: String,
+    val width: Int?,
+    val height: Int?,
+    val link: String,
+    val position: String?,
+    val campaign: String
+) : Details()
+
+
+data class FeedbackOption(
+    val option1: String,
+    val option2: String,
+    val option3: String
+){
+    fun toList(): List<String> = listOf(option1, option2, option3).filter { it.isNotBlank() }
+}
+
+data class CSATStyling(
+    val delayDisplay: Int,
+    val displayDelay: String,
+    val csatTitleColor: String,
+    val csatCtaTextColor: String,
+    val csatBackgroundColor: String,
+    val csatOptionTextColour: String,
+    val csatOptionStrokeColor: String,
+    val csatCtaBackgroundColor: String,
+    val csatDescriptionTextColor: String,
+    val csatSelectedOptionTextColor: String,
+    val csatSelectedOptionBackgroundColor: String
+)
+
+
+data class CsatFeedbackPostRequest(
+    val csat: String,
+    val user_id : String,
+    val rating: Int,
+    val feedbackOption: String? = null,
+    val additionalComments: String = ""
+)

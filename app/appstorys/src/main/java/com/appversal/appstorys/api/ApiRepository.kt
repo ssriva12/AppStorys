@@ -46,4 +46,13 @@ internal class ApiRepository(private val apiService: ApiService) {
             )
         }
     }
+
+    suspend fun captureCSATResponse(accessToken: String, actions: CsatFeedbackPostRequest){
+        withContext(Dispatchers.IO) {
+            apiService.sendCSATResponse(
+                token = "Bearer $accessToken",
+                request = actions
+            )
+        }
+    }
 }

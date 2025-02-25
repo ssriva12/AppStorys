@@ -23,6 +23,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import com.appversal.appstorys.api.CSATDetails
+import com.appversal.appstorys.api.CSATStyling
+import com.appversal.appstorys.utils.toColor
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -34,45 +37,51 @@ data class CsatFeedback(
 )
 
 @Composable
-fun CsatDialog(
+internal fun CsatDialog(
     onDismiss: () -> Unit,
-    onSubmitFeedback: (CsatFeedback) -> Unit
+    onSubmitFeedback: (CsatFeedback) -> Unit,
+    csatDetails: CSATDetails
 ) {
     // Local content
     val localContent = remember {
         mapOf(
-            "title" to "We'd love your feedback!",
-            "description" to "This will help us improve your experience",
-            "thankyouText" to "Thank you for your feedback!",
-            "thankyouDescription" to "We appreciate you taking the time to share your thoughts.",
+            "title" to csatDetails.title.ifEmpty { "We'd love your feedback!" },
+            "description" to csatDetails.descriptionText.ifEmpty { "This will help us improve your experience" },
+            "thankyouText" to csatDetails.thankyouText.ifEmpty { "Thank you for your feedback!" },
+            "thankyouDescription" to csatDetails.thankyouText.ifEmpty { "We appreciate you taking the time to share your thoughts." },
             "rateUsText" to "Rate Us!",
             "feedbackPrompt" to "Please tell us what went wrong."
         )
     }
 
+
     // Styling
     val styling = remember {
         mapOf(
-            "csatBackgroundColor" to Color.White,
-            "csatTitleColor" to Color.Black,
-            "csatDescriptionTextColor" to Color(0xFF504F58),
-            "csatCtaBackgroundColor" to Color(0xFF007AFF),
-            "csatCtaTextColor" to Color.White,
-            "csatSelectedOptionBackgroundColor" to Color(0xFFE3F2FD),
-            "csatOptionStrokeColor" to Color(0xFFCCCCCC),
-            "csatSelectedOptionTextColor" to Color(0xFF007AFF),
-            "csatOptionTextColor" to Color.Black
+            "csatBackgroundColor" to csatDetails.styling?.csatBackgroundColor.toColor(Color.White),
+            "csatTitleColor" to csatDetails.styling?.csatTitleColor.toColor(Color.Black),
+            "csatDescriptionTextColor" to csatDetails.styling?.csatDescriptionTextColor.toColor(Color(0xFF504F58)),
+            "csatCtaBackgroundColor" to csatDetails.styling?.csatCtaBackgroundColor.toColor(Color(0xFF007AFF)),
+            "csatCtaTextColor" to csatDetails.styling?.csatCtaTextColor.toColor(Color.White),
+            "csatSelectedOptionBackgroundColor" to csatDetails.styling?.csatSelectedOptionBackgroundColor.toColor(Color(0xFFE3F2FD)),
+            "csatOptionStrokeColor" to csatDetails.styling?.csatOptionStrokeColor.toColor(Color(0xFFCCCCCC)),
+            "csatSelectedOptionTextColor" to csatDetails.styling?.csatSelectedOptionTextColor.toColor(Color(0xFF007AFF)),
+            "csatOptionTextColor" to csatDetails.styling?.csatOptionTextColour.toColor(Color.Black)
         )
     }
 
     // Feedback options
     val feedbackOptions = remember {
-        listOf(
-            "Poor UI/UX",
-            "App Performance",
-            "Missing Features",
-            "Other Issues"
-        )
+        if (csatDetails.feedbackOption.toList().isNotEmpty()){
+            csatDetails.feedbackOption.toList()
+        }else{
+            listOf(
+                "Poor UI/UX",
+                "App Performance",
+                "Missing Features",
+                "Other Issues"
+            )
+        }
     }
 
     var selectedStars by remember { mutableStateOf(0) }
@@ -154,7 +163,8 @@ fun CsatDialog(
                 ThankYouContent(
                     localContent = localContent,
                     styling = styling,
-                    onDone = onDismiss
+                    onDone = onDismiss,
+                    image = csatDetails.thankyouImage
                 )
             }
         }
@@ -315,6 +325,7 @@ private fun FeedbackContent(
 private fun ThankYouContent(
     localContent: Map<String, String>,
     styling: Map<String, Color>,
+    image: String,
     onDone: () -> Unit
 ) {
     Column(
@@ -323,7 +334,7 @@ private fun ThankYouContent(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         AsyncImage(
-            model = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTwlQ-xYqAIcjylz3NUGJ_jcdRmdzk_vMae0w&s",
+            model = image.ifEmpty { "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTwlQ-xYqAIcjylz3NUGJ_jcdRmdzk_vMae0w&s"  },
             contentDescription = "Thank you",
             modifier = Modifier.size(66.dp),
             contentScale = ContentScale.Fit

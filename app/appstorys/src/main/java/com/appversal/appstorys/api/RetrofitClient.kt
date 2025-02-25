@@ -9,7 +9,7 @@ internal object RetrofitClient {
     private const val BASE_URL = "https://backend.appstorys.com/"
 
     private val gson: Gson = GsonBuilder()
-        .registerTypeAdapter(Details::class.java, CampaignDetailsDeserializer()) // Register custom deserializer
+        .registerTypeAdapter(CampaignResponse::class.java, CampaignResponseDeserializer())
         .create()
 
     val apiService: ApiService by lazy {
