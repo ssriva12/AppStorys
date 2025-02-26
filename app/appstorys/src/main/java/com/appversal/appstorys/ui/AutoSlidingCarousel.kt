@@ -46,7 +46,7 @@ import coil.request.ImageRequest
 import com.appversal.appstorys.utils.isGifUrl
 
 
-const val AUTO_SLIDE_DURATION = 2000L
+const val AUTO_SLIDE_DURATION = 5000L
 
 
 @Composable
@@ -58,7 +58,7 @@ internal fun AutoSlidingCarousel(
     itemContent: @Composable (index: Int) -> Unit,
     selectedColor: Color = Color.Black,
     unSelectedColor: Color = Color.Gray,
-    selectedLength: Dp = 30.dp,
+    selectedLength: Dp = 20.dp,
     dotSize: Dp = 8.dp
 ) {
     val isDragged by pagerState.interactionSource.collectIsDraggedAsState()

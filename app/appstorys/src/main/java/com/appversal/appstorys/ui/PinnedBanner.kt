@@ -75,7 +75,7 @@ internal fun PinnedBanner(
             colors = CardDefaults.cardColors(
                 containerColor = Color.Transparent,
             ),
-            modifier = modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = bottomMargin),
+            modifier = modifier.padding(top = 16.dp, bottom = bottomMargin),
             shape = shape,
         ) {
             Box(modifier = Modifier){
@@ -128,7 +128,7 @@ internal fun PinnedBanner(
             colors = CardDefaults.cardColors(
                 containerColor = Color.Transparent,
             ),
-            modifier = modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = bottomMargin),
+            modifier = modifier.padding(top = 16.dp, bottom = bottomMargin),
             shape = shape,
         ) {
             Box(modifier = Modifier){

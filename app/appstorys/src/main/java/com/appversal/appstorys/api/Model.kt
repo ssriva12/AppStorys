@@ -138,6 +138,6 @@ data class CsatFeedbackPostRequest(
     val csat: String,
     val user_id : String,
     val rating: Int,
-    val feedbackOption: String? = null,
-    val additionalComments: String = ""
+    val feedback_option: String? = null,
+    val additional_comments: String = ""
 )

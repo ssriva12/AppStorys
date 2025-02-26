@@ -13,6 +13,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -150,6 +151,7 @@ class AppStorys private constructor(
                     ?.firstOrNull { it.campaignType == "CSAT" }
                     ?: campaignsData.value.firstOrNull { it.campaignType == "CSAT" }
 
+            Log.i("CSAT", campaign.toString())
             val csatDetails = when (val details = campaign?.details) {
                 is CSATDetails -> details
                 else -> null
@@ -173,7 +175,7 @@ class AppStorys private constructor(
                 AnimatedVisibility(
                     modifier = modifier,
                     visible = isVisibleState,
-                    enter = slideInVertically { it },
+                    enter = slideInVertically() { it },
                     exit = slideOutVertically { it }
                 ) {
                     CsatDialog(
@@ -185,15 +187,15 @@ class AppStorys private constructor(
                             }
                         },
                         onSubmitFeedback = { feedback ->
-                            coroutineScope.launch{
+                            coroutineScope.launch {
                                 repository.captureCSATResponse(
                                     accessToken,
                                     CsatFeedbackPostRequest(
                                         user_id = userId,
                                         csat = csatDetails.id,
                                         rating = feedback.rating,
-                                        additionalComments = feedback.additionalComments,
-                                        feedbackOption = feedback.feedbackOption
+                                        additional_comments = feedback.additionalComments,
+                                        feedback_option = feedback.feedbackOption
                                     )
 
                                 )
@@ -209,14 +211,11 @@ class AppStorys private constructor(
 
     @Composable
     fun Floater(
-        modifier: Modifier = Modifier,
-        position: String? = null
+        modifier: Modifier = Modifier
     ) {
         val campaignsData = campaigns.collectAsStateWithLifecycle()
 
-        val campaign = position?.let { pos -> campaignsData.value.filter { it.position == pos } }
-            ?.firstOrNull { it.campaignType == "FLT" }
-            ?: campaignsData.value.firstOrNull { it.campaignType == "FLT" }
+        val campaign = campaignsData.value.firstOrNull { it.campaignType == "FLT" && it.details is FloaterDetails}
 
         val floaterDetails = when (val details = campaign?.details) {
             is FloaterDetails -> details
@@ -231,24 +230,34 @@ class AppStorys private constructor(
 
             }
 
-            OverlayFloater(
-                modifier = modifier,
-                onClick = {
-                    campaign?.id?.let {
-                        clickEvent(url = floaterDetails.link, campaignId = it)
-                    }
-                },
-                image = floaterDetails.image,
-                height = if (floaterDetails.height != null) floaterDetails.height.dp else 60.dp,
-                width = if (floaterDetails.width != null) floaterDetails.width.dp else 60.dp
-            )
+
+            Box(modifier = modifier.fillMaxWidth()){
+                val alignmentModifier = when (floaterDetails.position) {
+                    "right" -> Modifier.align(Alignment.BottomEnd)
+                    "left" -> Modifier.align(Alignment.BottomStart)
+                    else -> Modifier.align(Alignment.BottomStart)
+                }
+
+                OverlayFloater(
+                    modifier = Modifier.then(alignmentModifier),
+                    onClick = {
+                        campaign?.id?.let {
+                            clickEvent(url = floaterDetails.link, campaignId = it)
+                        }
+                    },
+                    image = floaterDetails.image,
+                    height = floaterDetails.height?.dp ?: 60.dp,
+                    width = floaterDetails.width?.dp ?: 60.dp
+                )
+            }
+
         }
     }
 
     @Composable
     fun PinnedBanner(
         modifier: Modifier = Modifier,
-        contentScale: ContentScale = ContentScale.Crop,
+        contentScale: ContentScale = ContentScale.FillWidth,
         staticHeight: Dp = 200.dp,
         placeHolder: Drawable?,
         position: String?
@@ -319,22 +328,24 @@ class AppStorys private constructor(
         position: String?
     ) {
         val campaignsData = campaigns.collectAsStateWithLifecycle()
-        val campaign = position?.let { pos -> campaignsData.value.filter { it.position == pos } }
-            ?.firstOrNull { it.campaignType == "WID" && it.details is WidgetDetails }
-            ?: campaignsData.value.firstOrNull { it.campaignType == "WID" && it.details is WidgetDetails }
+        val campaign = campaignsData.value
+            .filter { it.campaignType == "WID" && it.details is WidgetDetails }
+            .firstOrNull { it.position?.replace("\"", "") == position.toString() }
+
         if (campaign != null) {
             val widgetDetails = campaign?.details as WidgetDetails ?: null
 
-            if (widgetDetails?.type == "full") (
-                    FullWidget(
-                        modifier = modifier,
-                        staticHeight = staticHeight,
-                        contentScale = contentScale,
-                        placeHolder = placeHolder,
-                        position = position
-                    )
+            if (widgetDetails?.type == "full") {
 
-                    ) else if (widgetDetails?.type == "half") {
+
+                FullWidget(
+                    modifier = modifier,
+                    staticHeight = staticHeight,
+                    placeHolder = placeHolder,
+                    position = position
+                )
+
+            } else if (widgetDetails?.type == "half") {
                 DoubleWidget(
                     modifier = modifier,
                     staticHeight = staticHeight,
@@ -349,22 +360,22 @@ class AppStorys private constructor(
     @Composable
     fun FullWidget(
         modifier: Modifier = Modifier,
-        contentScale: ContentScale = ContentScale.Crop,
+        contentScale: ContentScale = ContentScale.FillWidth,
         staticHeight: Dp = 200.dp,
         placeHolder: Drawable?,
         position: String?
     ) {
         val campaignsData = campaigns.collectAsStateWithLifecycle()
         val disabledCampaigns = disabledCampaigns.collectAsStateWithLifecycle()
+        val campaign = campaignsData.value
+            .filter { it.campaignType == "WID" && it.details is WidgetDetails && it.position?.replace("\"", "") == position.toString() }
+            .firstOrNull { (it.details as WidgetDetails).type == "full" }
 
-        val campaigns = position?.let { pos -> campaignsData.value.filter { it.position == pos } }
-            ?.filter { it.campaignType == "WID" && it.details is WidgetDetails }
-            ?: campaignsData.value.filter { it.campaignType == "WID" && it.details is WidgetDetails }
+        val widgetDetails = (campaign?.details as? WidgetDetails)
 
-        val campaign = campaigns.firstOrNull { (it.details as WidgetDetails).type == "full" }
-        val widgetDetails =
-            if (campaign?.details != null) campaign.details as WidgetDetails else null
-
+        Log.i("WidgetDetails", campaignsData.value.filter{
+            it.campaignType == "WID" && it.details is WidgetDetails
+        }.toString())
         if (widgetDetails != null && !disabledCampaigns.value.contains(campaign?.id) && widgetDetails.type == "full") {
             val pagerState = rememberPagerState(pageCount = {
                 widgetDetails.widgetImages.count()
@@ -417,13 +428,12 @@ class AppStorys private constructor(
         val campaignsData = campaigns.collectAsStateWithLifecycle()
         val disabledCampaigns = disabledCampaigns.collectAsStateWithLifecycle()
 
-        val campaigns = position?.let { pos -> campaignsData.value.filter { it.position == pos } }
-            ?.filter { it.campaignType == "WID" && it.details is WidgetDetails }
-            ?: campaignsData.value.filter { it.campaignType == "WID" && it.details is WidgetDetails }
+        val campaign = campaignsData.value
+            .filter { it.campaignType == "WID" && it.details is WidgetDetails && it.position?.replace("\"", "") == position.toString() }
+            .firstOrNull { (it.details as WidgetDetails).type == "half" }
 
-        val campaign = campaigns.firstOrNull { (it.details as WidgetDetails).type == "half" }
-        val widgetDetails =
-            if (campaign?.details != null) campaign.details as WidgetDetails else null
+
+        val widgetDetails = (campaign?.details as? WidgetDetails)
 
 
         if (widgetDetails != null && !disabledCampaigns.value.contains(campaign?.id) && widgetDetails.type == "half") {

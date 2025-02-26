@@ -43,8 +43,6 @@ fun BottomSheetComponent(onDismiss: () -> Unit) {
                     .fillMaxWidth() // Make it take full width
                     .height(200.dp), // Adjust height as needed
                 contentScale = ContentScale.Crop
-//                modifier = Modifier.size(66.dp),
-//                contentScale = ContentScale.Fit
             )
 
             Spacer(modifier = Modifier.height(16.dp))

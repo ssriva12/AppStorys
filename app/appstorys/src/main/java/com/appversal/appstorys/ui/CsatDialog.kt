@@ -330,6 +330,7 @@ private fun ThankYouContent(
 ) {
     Column(
         modifier = Modifier
+            .fillMaxWidth()
             .padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
