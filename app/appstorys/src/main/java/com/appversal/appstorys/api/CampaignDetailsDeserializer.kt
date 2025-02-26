@@ -23,7 +23,7 @@ internal class CampaignResponseDeserializer : JsonDeserializer<CampaignResponse>
             val details: Details? = when (campaignType) {
                 "FLT" -> context.deserialize(detailsJson, FloaterDetails::class.java)
                 "CSAT" -> context.deserialize(detailsJson, CSATDetails::class.java)
-                "WIDGET" -> context.deserialize(detailsJson, WidgetDetails::class.java)
+                "WID" -> context.deserialize(detailsJson, WidgetDetails::class.java)
                 "BAN" -> context.deserialize(detailsJson, BannerDetails::class.java)
                 else -> null
             }
