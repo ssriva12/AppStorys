@@ -44,16 +44,9 @@ data class ReelItem(
 )
 
 @Composable
-fun ReelsScreen(reels: List<ReelItem>) {
-    var selectedReelIndex by remember { mutableStateOf<Int?>(null) }
+fun ReelsScreen(reels: List<ReelItem>, onReelClick: (Int) -> Unit) {
 
-    if (selectedReelIndex != null) {
-        FullScreenVideoScreen(
-            reels = reels,
-            startIndex = selectedReelIndex!!,
-            onBack = { selectedReelIndex = null }
-        )
-    } else {
+
         LazyRow(
             modifier = Modifier
                 .fillMaxWidth()
@@ -66,7 +59,7 @@ fun ReelsScreen(reels: List<ReelItem>) {
                         .height(180.dp)
                         .padding(end = 10.dp)
                         .clip(RoundedCornerShape(12.dp))
-                        .clickable { selectedReelIndex = index }
+                        .clickable { onReelClick(index) }
                 ) {
                     Image(
                         painter = rememberAsyncImagePainter(reels[index].thumbnailUrl),
@@ -77,7 +70,7 @@ fun ReelsScreen(reels: List<ReelItem>) {
                 }
             }
         }
-    }
+
 }
 
 @Composable

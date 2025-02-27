@@ -41,6 +41,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import coil.compose.AsyncImage
+import com.appversal.appstorys.ui.FullScreenVideoScreen
 import com.appversal.appstorys.ui.Pip
 import com.appversal.appstorys.ui.ReelItem
 import com.appversal.appstorys.ui.ReelsScreen
@@ -71,6 +72,29 @@ fun MyApp() {
 //    var isSheetOpen by remember { mutableStateOf(false) }
     val campaignManager = App.appStorys
 
+    var selectedReelIndex by remember { mutableStateOf<Int?>(null) }
+    val reels = listOf(
+        ReelItem(
+            id = "0e63a437-71ae-4e17-ad87-d2dc74809df7",
+            buttonText = "Click Here",
+            order = 0,
+            descriptionText = "I love this Reel",
+            videoUrl = "https://appstorysmediabucket.s3.amazonaws.com/reel_video/856787-hd_1920_1080_30fps.mp4",
+            likes = 0,
+            thumbnailUrl = "https://appstorysmediabucket.s3.amazonaws.com/reel_thumbnail/Screenshot_2025-02-27_at_5.12.31PM.png",
+            link = "https://appstorys.com"
+        ),
+        ReelItem(
+            id = "5c9fc19b-bef0-45b3-9450-a879aa6faf01",
+            buttonText = "Click Here",
+            order = 1,
+            descriptionText = "Click here",
+            videoUrl = "https://appstorysmediabucket.s3.amazonaws.com/reel_video/854918-hd_1920_1080_30fps.mp4",
+            likes = 0,
+            thumbnailUrl = "https://appstorysmediabucket.s3.amazonaws.com/reel_thumbnail/Screenshot_2025-02-27_at_5.12.31PM.png",
+            link = "https://appstorys.com"
+        )
+    )
 
     Box {
 
@@ -82,8 +106,9 @@ fun MyApp() {
 
 
 
-
                 BottomNavigationBar(selectedItem) { index -> selectedItem = index }
+
+
 
 
             }
@@ -114,12 +139,19 @@ fun MyApp() {
 
 
                 when (selectedItem) {
-                    0 -> HomeScreen()
+                    0 -> HomeScreen(reels, {selectedReelIndex = it})
                     1 -> PayScreen()
                 }
             }
         }
 
+        if (selectedReelIndex != null){
+            FullScreenVideoScreen(
+                reels = reels,
+                startIndex = selectedReelIndex!!,
+                onBack = { selectedReelIndex = null }
+            )
+        }
 
         campaignManager.CSAT(
             modifier = Modifier.align(Alignment.BottomCenter),
@@ -129,7 +161,7 @@ fun MyApp() {
 }
 
 @Composable
-fun HomeScreen() {
+fun HomeScreen(reelsList: List<ReelItem>, onReelClick: (Int) -> Unit) {
     val context = LocalContext.current
     val campaignManager = App.appStorys
 
@@ -151,28 +183,7 @@ fun HomeScreen() {
         ) {
             item {
 
-                val reelsList = listOf(
-                    ReelItem(
-                        id = "0e63a437-71ae-4e17-ad87-d2dc74809df7",
-                        buttonText = "Click Here",
-                        order = 0,
-                        descriptionText = "I love this Reel",
-                        videoUrl = "https://appstorysmediabucket.s3.amazonaws.com/reel_video/856787-hd_1920_1080_30fps.mp4",
-                        likes = 0,
-                        thumbnailUrl = "https://appstorysmediabucket.s3.amazonaws.com/reel_thumbnail/Screenshot_2025-02-27_at_5.12.31PM.png",
-                        link = "https://appstorys.com"
-                    ),
-                    ReelItem(
-                        id = "5c9fc19b-bef0-45b3-9450-a879aa6faf01",
-                        buttonText = "Click Here",
-                        order = 1,
-                        descriptionText = "Click here",
-                        videoUrl = "https://appstorysmediabucket.s3.amazonaws.com/reel_video/854918-hd_1920_1080_30fps.mp4",
-                        likes = 0,
-                        thumbnailUrl = "https://appstorysmediabucket.s3.amazonaws.com/reel_thumbnail/Screenshot_2025-02-27_at_5.12.31PM.png",
-                        link = "https://appstorys.com"
-                    )
-                )
+
 
                 Image(
                     painter = painterResource(id = R.drawable.home_top), // Use the image from drawable
@@ -183,7 +194,7 @@ fun HomeScreen() {
                     contentScale = ContentScale.FillWidth // Ensures the image fits the screen width
                 )
 
-                ReelsScreen(reels = reelsList)
+                ReelsScreen(reels = reelsList, onReelClick = onReelClick)
 
                 Pip()
 
