@@ -5,54 +5,89 @@ import kotlinx.coroutines.withContext
 
 internal class ApiRepository(private val apiService: ApiService) {
 
+
+
     suspend fun getAccessToken(app_id: String, account_id: String): String? {
         return withContext(Dispatchers.IO) {
-            val response = apiService.validateAccount(
-                ValidateAccountRequest(
-                    app_id = app_id,
-                    account_id = account_id
-                )
-            )
-            response.access_token
+            when (val result = safeApiCall {
+                apiService.validateAccount(
+                    ValidateAccountRequest(app_id = app_id, account_id = account_id)
+                ).access_token
+            }) {
+                is ApiResult.Success -> result.data
+                is ApiResult.Error -> {
+                    println("Error getting access token: ${result.message}")
+                    null
+                }
+            }
         }
     }
+
 
     suspend fun getCampaigns(accessToken: String, screenName: String, positions: List<String>?): List<String> {
         return withContext(Dispatchers.IO) {
-            val response = apiService.trackScreen(
-                token = "Bearer $accessToken",
-                request = TrackScreenRequest(screen_name = screenName, positions)
-            )
-            response.campaigns
+            when (val result = safeApiCall {
+                apiService.trackScreen(
+                    token = "Bearer $accessToken",
+                    request = TrackScreenRequest(screen_name = screenName, positions)
+                ).campaigns
+            }) {
+                is ApiResult.Success -> result.data
+                is ApiResult.Error -> {
+                    println("Error getting campaigns: ${result.message}")
+                    emptyList()
+                }
+            }
         }
     }
 
-    suspend fun getCampaignData(accessToken: String, userId: String, campaignList: List<String>, attributes: List<Map<String, Any>>?): CampaignResponse {
+    suspend fun getCampaignData(
+        accessToken: String,
+        userId: String,
+        campaignList: List<String>,
+        attributes: List<Map<String, Any>>?
+    ): CampaignResponse? {
         return withContext(Dispatchers.IO) {
-            val response = apiService.trackUser(
-                token = "Bearer $accessToken",
-                request = TrackUserRequest(user_id = userId, campaign_list = campaignList, attributes = attributes)
-            )
-            response
+            when (val result = safeApiCall {
+                apiService.trackUser(
+                    token = "Bearer $accessToken",
+                    request = TrackUserRequest(user_id = userId, campaign_list = campaignList, attributes = attributes)
+                )
+            }) {
+                is ApiResult.Success -> result.data
+                is ApiResult.Error -> {
+                    println("Error getting campaign data: ${result.message}")
+                    null
+                }
+            }
         }
     }
 
-
-    suspend fun trackActions(accessToken: String, actions: TrackAction){
+    suspend fun trackActions(accessToken: String, actions: TrackAction) {
         withContext(Dispatchers.IO) {
-            apiService.trackAction(
-                token = "Bearer $accessToken",
-                request = actions
-            )
+            when (val result = safeApiCall {
+                apiService.trackAction(
+                    token = "Bearer $accessToken",
+                    request = actions
+                )
+            }) {
+                is ApiResult.Error -> println("Error tracking actions: ${result.message}")
+                else -> Unit // No need to handle success for void functions
+            }
         }
     }
 
-    suspend fun captureCSATResponse(accessToken: String, actions: CsatFeedbackPostRequest){
+    suspend fun captureCSATResponse(accessToken: String, actions: CsatFeedbackPostRequest) {
         withContext(Dispatchers.IO) {
-            apiService.sendCSATResponse(
-                token = "Bearer $accessToken",
-                request = actions
-            )
+            when (val result = safeApiCall {
+                apiService.sendCSATResponse(
+                    token = "Bearer $accessToken",
+                    request = actions
+                )
+            }) {
+                is ApiResult.Error -> println("Error capturing CSAT response: ${result.message}")
+                else -> Unit
+            }
         }
     }
 }

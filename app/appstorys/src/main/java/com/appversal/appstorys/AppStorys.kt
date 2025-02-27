@@ -9,18 +9,14 @@ import android.util.Patterns
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.ripple.rememberRipple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -32,6 +28,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.LayoutCoordinates
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -51,12 +50,20 @@ import com.appversal.appstorys.ui.CsatDialog
 import com.appversal.appstorys.ui.DoubleWidgets
 import com.appversal.appstorys.ui.ImageCard
 import com.appversal.appstorys.ui.OverlayFloater
+import com.appversal.appstorys.ui.ShowcaseHighlight
+import com.appversal.appstorys.ui.ShowcaseView
+import com.appversal.appstorys.ui.TooltipContent
+import com.appversal.appstorys.ui.TooltipPopup
+import com.appversal.appstorys.ui.TooltipPopupPosition
+import com.appversal.appstorys.ui.calculateTooltipPopupPosition
+import com.appversal.appstorys.utils.removeDoubleQuotes
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 class AppStorys private constructor(
@@ -76,6 +83,12 @@ class AppStorys private constructor(
 
     private val _impressionsImages = MutableStateFlow<List<String>>(emptyList())
     private val impressionsImages: StateFlow<List<String>> get() = _impressionsImages
+
+    private val _targets = MutableStateFlow<Map<String, LayoutCoordinates>>(emptyMap())
+    private val targets: StateFlow<Map<String, LayoutCoordinates>> = _targets.asStateFlow()
+
+    private val _showcaseVisible = MutableStateFlow(false)
+    private val showcaseVisible: StateFlow<Boolean> = _showcaseVisible.asStateFlow()
 
     private val apiService = RetrofitClient.apiService
     private val repository = ApiRepository(apiService)
@@ -107,12 +120,15 @@ class AppStorys private constructor(
             val campaignList = repository.getCampaigns(accessToken, currentScreen, null)
             Log.d("campaignList", campaignList.toString())
 
-            val campaignsData =
-                repository.getCampaignData(accessToken, userId, campaignList, attributes)
-            Log.d("campaignsData", campaignsData.toString())
+            if (campaignList.isNotEmpty()) {
+                val campaignsData =
+                    repository.getCampaignData(accessToken, userId, campaignList, attributes)
+                Log.d("campaignsData", campaignsData.toString())
 
-            _campaigns.emit(campaignsData.campaigns)
-            Log.d("CampaignsValue", _campaigns.toString())
+                campaignsData?.campaigns?.let { _campaigns.emit(it) }
+                Log.d("CampaignsValue", _campaigns.toString())
+            }
+
         }
     }
 
@@ -127,12 +143,14 @@ class AppStorys private constructor(
                 val campaignList = repository.getCampaigns(accessToken, currentScreen, positionList)
                 Log.d("campaignList", campaignList.toString())
 
-                val campaignsData =
-                    repository.getCampaignData(accessToken, userId, campaignList, attributes)
-                Log.d("campaignsData", campaignsData.toString())
+                if (campaignList.isNotEmpty()) {
+                    val campaignsData =
+                        repository.getCampaignData(accessToken, userId, campaignList, attributes)
+                    Log.d("campaignsData", campaignsData.toString())
 
-                _campaigns.emit(campaignsData.campaigns)
-                Log.d("CampaignsValue", _campaigns.toString())
+                    campaignsData?.campaigns?.let { _campaigns.emit(it) }
+                    Log.d("CampaignsValue", _campaigns.toString())
+                }
             }
         }
     }
@@ -151,7 +169,6 @@ class AppStorys private constructor(
                     ?.firstOrNull { it.campaignType == "CSAT" }
                     ?: campaignsData.value.firstOrNull { it.campaignType == "CSAT" }
 
-            Log.i("CSAT", campaign.toString())
             val csatDetails = when (val details = campaign?.details) {
                 is CSATDetails -> details
                 else -> null
@@ -211,11 +228,12 @@ class AppStorys private constructor(
 
     @Composable
     fun Floater(
-        modifier: Modifier = Modifier
+        boxModifier: Modifier = Modifier,
+        iconModifier: Modifier = Modifier
     ) {
         val campaignsData = campaigns.collectAsStateWithLifecycle()
 
-        val campaign = campaignsData.value.firstOrNull { it.campaignType == "FLT" && it.details is FloaterDetails}
+        val campaign = campaignsData.value.firstOrNull { it.campaignType == "FLT" && it.details is FloaterDetails }
 
         val floaterDetails = when (val details = campaign?.details) {
             is FloaterDetails -> details
@@ -231,7 +249,7 @@ class AppStorys private constructor(
             }
 
 
-            Box(modifier = modifier.fillMaxWidth()){
+            Box(modifier = boxModifier.fillMaxWidth()) {
                 val alignmentModifier = when (floaterDetails.position) {
                     "right" -> Modifier.align(Alignment.BottomEnd)
                     "left" -> Modifier.align(Alignment.BottomStart)
@@ -239,7 +257,7 @@ class AppStorys private constructor(
                 }
 
                 OverlayFloater(
-                    modifier = Modifier.then(alignmentModifier),
+                    modifier = iconModifier.then(alignmentModifier),
                     onClick = {
                         campaign?.id?.let {
                             clickEvent(url = floaterDetails.link, campaignId = it)
@@ -251,6 +269,49 @@ class AppStorys private constructor(
                 )
             }
 
+        }
+    }
+
+    @Composable
+    fun ToolTipWrapper(modifier: Modifier, requesterView: @Composable (Modifier) -> Unit) {
+        val visibleShowcase by showcaseVisible.collectAsStateWithLifecycle()
+        var position by remember { mutableStateOf(TooltipPopupPosition()) }
+        val view = LocalView.current.rootView
+
+        TooltipPopup(
+            modifier = modifier
+                .padding(start = 8.dp),
+            requesterView = { modifier ->
+
+                requesterView(modifier.onGloballyPositioned { coordinates ->
+                    _targets.value = _targets.value.toMutableMap().apply {
+                        put(KEY_FLOATER, coordinates)
+                    }
+                    position = calculateTooltipPopupPosition(view, coordinates)
+                })
+            },
+            backgroundColor = Color.White,
+            position = position,
+            isShowTooltip = visibleShowcase,
+            tooltipContent = {
+                TooltipContent()
+
+            }
+        )
+    }
+
+
+    @Composable
+    fun ShowCase() {
+        val coordinates by targets.collectAsStateWithLifecycle()
+        val visibleShowcase by showcaseVisible.collectAsStateWithLifecycle()
+
+        coordinates[KEY_FLOATER]?.let {
+            ShowcaseView(
+                visible = visibleShowcase,
+                targetCoordinates = it,
+                highlight = ShowcaseHighlight.Circular()
+            )
         }
     }
 
@@ -331,7 +392,7 @@ class AppStorys private constructor(
         val campaignsData = campaigns.collectAsStateWithLifecycle()
         val campaign = campaignsData.value
             .filter { it.campaignType == "WID" && it.details is WidgetDetails }
-            .firstOrNull { it.position?.replace("\"", "") == position.toString() }
+            .firstOrNull { it.position?.removeDoubleQuotes() == position.toString() }
 
         if (campaign != null) {
             val widgetDetails = campaign?.details as WidgetDetails ?: null
@@ -343,6 +404,7 @@ class AppStorys private constructor(
                     modifier = modifier,
                     staticHeight = staticHeight,
                     placeHolder = placeHolder,
+                    contentScale = contentScale,
                     position = position
                 )
 
@@ -369,12 +431,14 @@ class AppStorys private constructor(
         val campaignsData = campaigns.collectAsStateWithLifecycle()
         val disabledCampaigns = disabledCampaigns.collectAsStateWithLifecycle()
         val campaign = campaignsData.value
-            .filter { it.campaignType == "WID" && it.details is WidgetDetails && it.position?.replace("\"", "") == position.toString() }
+            .filter {
+                it.campaignType == "WID" && it.details is WidgetDetails && it.position?.removeDoubleQuotes() == position.toString()
+            }
             .firstOrNull { (it.details as WidgetDetails).type == "full" }
 
         val widgetDetails = (campaign?.details as? WidgetDetails)
 
-        Log.i("WidgetDetails", campaignsData.value.filter{
+        Log.i("WidgetDetails", campaignsData.value.filter {
             it.campaignType == "WID" && it.details is WidgetDetails
         }.toString())
         if (widgetDetails != null && !disabledCampaigns.value.contains(campaign?.id) && widgetDetails.type == "full") {
@@ -430,7 +494,9 @@ class AppStorys private constructor(
         val disabledCampaigns = disabledCampaigns.collectAsStateWithLifecycle()
 
         val campaign = campaignsData.value
-            .filter { it.campaignType == "WID" && it.details is WidgetDetails && it.position?.replace("\"", "") == position.toString() }
+            .filter {
+                it.campaignType == "WID" && it.details is WidgetDetails && it.position?.removeDoubleQuotes() == position.toString()
+            }
             .firstOrNull { (it.details as WidgetDetails).type == "half" }
 
 
@@ -603,5 +669,10 @@ class AppStorys private constructor(
                 ).also { instance = it }
             }
         }
+
+        private const val KEY_FLOATER = "KEY_FLOATER"
+
     }
+
+
 }

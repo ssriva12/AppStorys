@@ -1,10 +1,12 @@
 package com.appversal.appstorys.api
 
+import retrofit2.HttpException
 import retrofit2.http.Body
 import retrofit2.http.Header
 import retrofit2.http.POST
+import java.io.IOException
 
-interface ApiService {
+internal interface ApiService {
 
     @POST("api/v1/users/validate-account/")
     suspend fun validateAccount(
@@ -35,4 +37,21 @@ interface ApiService {
         @Header("Authorization") token: String,
         @Body request: CsatFeedbackPostRequest
     )
+}
+
+internal sealed class ApiResult<out T> {
+    data class Success<T>(val data: T) : ApiResult<T>()
+    data class Error(val message: String, val code: Int? = null) : ApiResult<Nothing>()
+}
+
+internal suspend fun <T> safeApiCall(apiCall: suspend () -> T): ApiResult<T> {
+    return try {
+        ApiResult.Success(apiCall())
+    } catch (e: HttpException) {
+        ApiResult.Error(e.message ?: "Unknown error", e.code())
+    } catch (e: IOException) {
+        ApiResult.Error("Network error. Please check your internet connection.")
+    } catch (e: Exception) {
+        ApiResult.Error("Unexpected error occurred.")
+    }
 }
