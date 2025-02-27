@@ -51,11 +51,12 @@ sealed class Details
 
 data class BannerDetails(
     val id: String,
-    val image: String,
+    val image: String?,
     val width: Int?,
     val height: Int?,
     val link: String,
-    val styling: Styling?
+    val styling: Styling?,
+    val lottie_data: String?
 ) : Details()
 
 data class Styling(

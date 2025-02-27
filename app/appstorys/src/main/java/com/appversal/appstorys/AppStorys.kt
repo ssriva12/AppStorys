@@ -292,7 +292,8 @@ class AppStorys private constructor(
                         clickEvent(url = bannerDetails.link, campaignId = it)
                     }
                 },
-                imageUrl = bannerUrl,
+                imageUrl = bannerUrl ?: "",
+                lottieUrl = bannerDetails.lottie_data,
                 width = bannerDetails.width?.dp,
                 exitIcon = style?.isClose ?: false,
                 exitUnit = {

@@ -41,6 +41,7 @@ android {
 }
 
 dependencies {
+
     implementation(libs.exoplayer)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
@@ -52,7 +53,9 @@ dependencies {
     implementation(libs.androidx.material3)
     implementation(libs.coil.compose)
 
+
     implementation(project(":app:appstorys"))
+    implementation(libs.androidx.navigation.compose)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

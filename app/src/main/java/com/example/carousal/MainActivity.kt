@@ -37,8 +37,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
 import coil.compose.AsyncImage
 import com.appversal.appstorys.ui.Pip
+import com.appversal.appstorys.ui.ReelItem
+import com.appversal.appstorys.ui.ReelsScreen
 import com.example.carousal.ui.theme.CarousalTheme
 import com.example.carousal.R
 import kotlinx.coroutines.launch
@@ -112,15 +117,14 @@ fun MyApp() {
                     0 -> HomeScreen()
                     1 -> PayScreen()
                 }
-
             }
         }
 
 
-//        campaignManager.CSAT(
-//            modifier = Modifier.align(Alignment.BottomCenter),
-//            position = null
-//        )
+        campaignManager.CSAT(
+            modifier = Modifier.align(Alignment.BottomCenter),
+            position = null
+        )
     }
 }
 
@@ -147,6 +151,29 @@ fun HomeScreen() {
         ) {
             item {
 
+                val reelsList = listOf(
+                    ReelItem(
+                        id = "0e63a437-71ae-4e17-ad87-d2dc74809df7",
+                        buttonText = "Click Here",
+                        order = 0,
+                        descriptionText = "I love this Reel",
+                        videoUrl = "https://appstorysmediabucket.s3.amazonaws.com/reel_video/856787-hd_1920_1080_30fps.mp4",
+                        likes = 0,
+                        thumbnailUrl = "https://appstorysmediabucket.s3.amazonaws.com/reel_thumbnail/Screenshot_2025-02-27_at_5.12.31PM.png",
+                        link = "https://appstorys.com"
+                    ),
+                    ReelItem(
+                        id = "5c9fc19b-bef0-45b3-9450-a879aa6faf01",
+                        buttonText = "Click Here",
+                        order = 1,
+                        descriptionText = "Click here",
+                        videoUrl = "https://appstorysmediabucket.s3.amazonaws.com/reel_video/854918-hd_1920_1080_30fps.mp4",
+                        likes = 0,
+                        thumbnailUrl = "https://appstorysmediabucket.s3.amazonaws.com/reel_thumbnail/Screenshot_2025-02-27_at_5.12.31PM.png",
+                        link = "https://appstorys.com"
+                    )
+                )
+
                 Image(
                     painter = painterResource(id = R.drawable.home_top), // Use the image from drawable
                     contentDescription = "Home Screen Top Image",
@@ -155,6 +182,10 @@ fun HomeScreen() {
                         .wrapContentHeight(),
                     contentScale = ContentScale.FillWidth // Ensures the image fits the screen width
                 )
+
+                ReelsScreen(reels = reelsList)
+
+                Pip()
 
                 campaignManager.Widget(
                     modifier = Modifier.fillMaxWidth(),

@@ -48,7 +48,7 @@ internal fun CsatDialog(
             "title" to csatDetails.title.ifEmpty { "We'd love your feedback!" },
             "description" to csatDetails.descriptionText.ifEmpty { "This will help us improve your experience" },
             "thankyouText" to csatDetails.thankyouText.ifEmpty { "Thank you for your feedback!" },
-            "thankyouDescription" to csatDetails.thankyouText.ifEmpty { "We appreciate you taking the time to share your thoughts." },
+            "thankyouDescription" to csatDetails.thankyouDescription.ifEmpty { "We appreciate you taking the time to share your thoughts." },
             "rateUsText" to "Rate Us!",
             "feedbackPrompt" to "Please tell us what went wrong."
         )
@@ -316,7 +316,10 @@ private fun FeedbackContent(
                 containerColor = styling["csatCtaBackgroundColor"]!!
             )
         ) {
-            Text("Submit")
+            Text(
+                text = "Submit",
+                color = styling["csatCtaTextColor"]!!
+            )
         }
     }
 }
@@ -366,7 +369,10 @@ private fun ThankYouContent(
                 containerColor = styling["csatCtaBackgroundColor"]!!
             )
         ) {
-            Text("Done")
+            Text(
+                text = "Done",
+                color = styling["csatCtaTextColor"]!!
+            )
         }
     }
 }
