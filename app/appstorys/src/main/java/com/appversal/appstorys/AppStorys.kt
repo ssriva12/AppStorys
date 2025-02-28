@@ -71,6 +71,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import com.appversal.appstorys.api.ReelActionRequest
 import com.appversal.appstorys.api.ReelStatusRequest
 
@@ -328,96 +331,102 @@ class AppStorys private constructor(
         }
     }
 
-
-
     @Composable
-    fun ReelsHorizontalRow(modifier: Modifier = Modifier){
+    fun Reels(modifier: Modifier = Modifier) {
         val campaignsData = campaigns.collectAsStateWithLifecycle()
-
         val campaign = campaignsData.value.firstOrNull { it.campaignType == "REL" && it.details is ReelsDetails }
         val reelsDetails = campaign?.details as? ReelsDetails
-
-        if (reelsDetails != null){
-
-            ReelsRow(
-                modifier = modifier,
-                reels = reelsDetails.reels,
-                onReelClick = { index ->
-                    coroutineScope.launch {
-                        _selectedReelIndex.emit(index)
-                        _reelFullScreenVisible.emit(true)
-                    }
-                }
-            )
-        }
-    }
-
-    @Composable
-    fun ReelFullScreen(){
         val selectedReelIndex by selectedReelIndex.collectAsStateWithLifecycle()
         val visibility by reelFullScreenVisible.collectAsStateWithLifecycle()
 
-
-        val campaignsData = campaigns.collectAsStateWithLifecycle()
-
-        val campaign = campaignsData.value.firstOrNull { it.campaignType == "REL" && it.details is ReelsDetails }
-        val reelsDetails = campaign?.details as? ReelsDetails
-
         if (reelsDetails != null){
-            BackHandler() {
+            Box(modifier = Modifier.fillMaxSize()) {
+
+                ReelsRow(
+                    modifier = modifier,
+                    reels = reelsDetails.reels,
+                    onReelClick = { index ->
+                        coroutineScope.launch {
+                            _selectedReelIndex.emit(index)
+                            _reelFullScreenVisible.emit(true)
+                        }
+                    }
+                )
+
+                if (visibility){
+                    ReelFullScreen(campaignId = campaign.id, reelsDetails = reelsDetails, selectedReelIndex = selectedReelIndex){
+                        coroutineScope.launch {
+                            _selectedReelIndex.emit(0)
+                            _reelFullScreenVisible.emit(false)
+                        }
+                    }
+                }
+            }
+        }
+
+    }
+
+    @Composable
+    private fun ReelFullScreen(campaignId: String, reelsDetails: ReelsDetails, selectedReelIndex: Int, onDismiss : () -> Unit){
+
+
+        Dialog(
+            onDismissRequest = onDismiss,
+            properties = DialogProperties(
+                dismissOnBackPress = true,
+                dismissOnClickOutside = false,
+                usePlatformDefaultWidth = false
+            )
+        ) {
+
+            BackHandler {
                 coroutineScope.launch {
                     _selectedReelIndex.emit(0)
                     _reelFullScreenVisible.emit(false)
                 }
             }
 
-            AnimatedVisibility(
-                visible = visibility,
-                enter = fadeIn(tween(700)),
-                exit = fadeOut(tween(700))
-            ) {
-                FullScreenVideoScreen(
-                    reels = reelsDetails.reels,
-                    startIndex = selectedReelIndex,
-                    sendLikesStatus = {
-                        if (!_impressions.value.contains(it.first.id)){
-                            coroutineScope.launch {
-                                val impressions = ArrayList(impressions.value)
-                                impressions.add(it.first.id)
-                                _impressions.emit(impressions)
-
-                                repository.sendReelLikeStatus(
-                                    accessToken = accessToken,
-                                    actions = ReelStatusRequest(
-                                        user_id = userId,
-                                        action = it.second,
-                                        reel = it.first.id
-                                    )
-                                )
-                            }
-                        }
-                    },
-                    sendEvents = {
+            FullScreenVideoScreen(
+                reels = reelsDetails.reels,
+                startIndex = selectedReelIndex,
+                sendLikesStatus = {
+                    if (!_impressions.value.contains(it.first.id)){
                         coroutineScope.launch {
-                            repository.trackReelActions(
+                            val impressions = ArrayList(impressions.value)
+                            impressions.add(it.first.id)
+                            _impressions.emit(impressions)
+
+                            repository.sendReelLikeStatus(
                                 accessToken = accessToken,
-                                actions = ReelActionRequest(
+                                actions = ReelStatusRequest(
                                     user_id = userId,
-                                    reel_id = it.first.id,
-                                    event_type = it.second,
-                                    campaign_id = campaign.id
+                                    action = it.second,
+                                    reel = it.first.id
                                 )
                             )
                         }
-                    },
-                    onBack = {
-                        coroutineScope.launch {
-                            _selectedReelIndex.emit(0)
-                            _reelFullScreenVisible.emit(false)
-                        }
                     }
-                )
-            }
+                },
+                sendEvents = {
+                    coroutineScope.launch {
+                        repository.trackReelActions(
+                            accessToken = accessToken,
+                            actions = ReelActionRequest(
+                                user_id = userId,
+                                reel_id = it.first.id,
+                                event_type = it.second,
+                                campaign_id = campaignId
+                            )
+                        )
+                    }
+                },
+                onBack = {
+                    coroutineScope.launch {
+                        _selectedReelIndex.emit(0)
+                        _reelFullScreenVisible.emit(false)
+                    }
+                }
+            )
         }
     }
 
