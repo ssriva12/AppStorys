@@ -1,14 +1,10 @@
 package com.appversal.appstorys.ui
 
 import android.net.Uri
-import android.os.Bundle
-import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -31,24 +27,14 @@ import androidx.compose.foundation.pager.VerticalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Share
+import com.appversal.appstorys.api.Reel
 
-data class ReelItem(
-    val id: String,
-    val buttonText: String,
-    val order: Int,
-    val descriptionText: String,
-    val videoUrl: String,
-    val likes: Int,
-    val thumbnailUrl: String,
-    val link: String
-)
 
 @Composable
-fun ReelsScreen(reels: List<ReelItem>, onReelClick: (Int) -> Unit) {
-
+internal fun ReelsRow(modifier : Modifier, reels: List<Reel>, onReelClick: (Int) -> Unit) {
 
         LazyRow(
-            modifier = Modifier
+            modifier = modifier
                 .fillMaxWidth()
                 .padding(16.dp)
         ) {
@@ -62,7 +48,7 @@ fun ReelsScreen(reels: List<ReelItem>, onReelClick: (Int) -> Unit) {
                         .clickable { onReelClick(index) }
                 ) {
                     Image(
-                        painter = rememberAsyncImagePainter(reels[index].thumbnailUrl),
+                        painter = rememberAsyncImagePainter(reels[index].thumbnail),
                         contentDescription = "Thumbnail",
                         contentScale = ContentScale.Crop,
                         modifier = Modifier.fillMaxSize()
@@ -74,7 +60,7 @@ fun ReelsScreen(reels: List<ReelItem>, onReelClick: (Int) -> Unit) {
 }
 
 @Composable
-fun FullScreenVideoScreen(reels: List<ReelItem>, startIndex: Int, onBack: () -> Unit) {
+internal fun FullScreenVideoScreen(reels: List<Reel>, startIndex: Int, onBack: () -> Unit, sendLikesStatus: (Pair<Reel, String>) -> Unit, sendEvents: (Pair<Reel, String>) -> Unit) {
     val screenHeight = getScreenHeight().dp
     val pagerState = rememberPagerState(initialPage = startIndex, pageCount = { reels.size })
     val context = LocalContext.current
@@ -93,7 +79,7 @@ fun FullScreenVideoScreen(reels: List<ReelItem>, startIndex: Int, onBack: () -> 
     val players = remember {
         reels.map { reel ->
             ExoPlayer.Builder(context).build().apply {
-                setMediaItem(MediaItem.fromUri(Uri.parse(reel.videoUrl)))
+                setMediaItem(MediaItem.fromUri(Uri.parse(reel.video)))
                 repeatMode = Player.REPEAT_MODE_ONE
                 prepare()
             }
@@ -104,6 +90,7 @@ fun FullScreenVideoScreen(reels: List<ReelItem>, startIndex: Int, onBack: () -> 
     LaunchedEffect(pagerState.currentPage) {
         players.forEach { it.playWhenReady = false } // Pause all videos
         players[pagerState.currentPage].playWhenReady = true // Play current video
+        sendEvents(Pair(reels[pagerState.currentPage], "IMP"))
     }
 
     // Clean up players when leaving the screen
@@ -115,8 +102,7 @@ fun FullScreenVideoScreen(reels: List<ReelItem>, startIndex: Int, onBack: () -> 
 
     Box(
         modifier = Modifier
-            .fillMaxWidth()
-            .height(screenHeight)
+            .fillMaxSize()
             .background(Color.Black)
     ) {
         VerticalPager(
@@ -168,6 +154,8 @@ fun FullScreenVideoScreen(reels: List<ReelItem>, startIndex: Int, onBack: () -> 
                                     } else {
                                         likesState[page].value -= 1
                                     }
+
+                                    sendLikesStatus(Pair(reels[page],if ( isLikedState[page].value) "like" else "unlike"))
                                 }
                             ) {
                                 Icon(
@@ -248,6 +236,7 @@ fun FullScreenVideoScreen(reels: List<ReelItem>, startIndex: Int, onBack: () -> 
                             if (reels[page].link.isNotEmpty() && reels[page].buttonText.isNotEmpty()) {
                                 Button(
                                     onClick = {
+                                        sendEvents(Pair(reels[page], "CLK"))
                                         try {
                                             val uri = Uri.parse(reels[page].link)
                                             val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, uri)

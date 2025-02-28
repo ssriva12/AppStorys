@@ -90,4 +90,33 @@ internal class ApiRepository(private val apiService: ApiService) {
             }
         }
     }
+
+
+    suspend fun trackReelActions(accessToken: String, actions: ReelActionRequest) {
+        withContext(Dispatchers.IO) {
+            when (val result = safeApiCall {
+                apiService.trackReelAction(
+                    token = "Bearer $accessToken",
+                    request = actions
+                )
+            }) {
+                is ApiResult.Error -> println("Error tracking actions: ${result.message}")
+                else -> Unit // No need to handle success for void functions
+            }
+        }
+    }
+
+    suspend fun sendReelLikeStatus(accessToken: String, actions: ReelStatusRequest) {
+        withContext(Dispatchers.IO) {
+            when (val result = safeApiCall {
+                apiService.sendReelLikeStatus(
+                    token = "Bearer $accessToken",
+                    request = actions
+                )
+            }) {
+                is ApiResult.Error -> println("Error tracking actions: ${result.message}")
+                else -> Unit // No need to handle success for void functions
+            }
+        }
+    }
 }

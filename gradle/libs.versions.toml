@@ -22,6 +22,7 @@ media3Ui = "1.5.1"
 exoplayerUi = "2.19.1"
 exoplayerCore = "2.19.1"
 navigationCompose = "2.8.8"
+activityComposeVersion = "1.10.1"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -51,6 +52,7 @@ androidx-media3-ui = { group = "androidx.media3", name = "media3-ui", version.re
 exoplayer-ui = { group = "com.google.android.exoplayer", name = "exoplayer-ui", version.ref = "exoplayerUi" }
 exoplayer-core = { group = "com.google.android.exoplayer", name = "exoplayer-core", version.ref = "exoplayerCore" }
 androidx-navigation-compose = { group = "androidx.navigation", name = "navigation-compose", version.ref = "navigationCompose" }
+activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "activityComposeVersion" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

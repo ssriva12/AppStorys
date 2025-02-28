@@ -37,6 +37,20 @@ internal interface ApiService {
         @Header("Authorization") token: String,
         @Body request: CsatFeedbackPostRequest
     )
+
+    @POST("api/v1/campaigns/reel-like/")
+    suspend fun sendReelLikeStatus(
+        @Header("Authorization") token: String,
+        @Body request: ReelStatusRequest
+    )
+
+
+    @POST("api/v1/users/track-action/")
+    suspend fun trackReelAction(
+        @Header("Authorization") token: String,
+        @Body request: ReelActionRequest
+    )
+
 }
 
 internal sealed class ApiResult<out T> {

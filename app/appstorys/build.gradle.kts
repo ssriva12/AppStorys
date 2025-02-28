@@ -65,6 +65,7 @@ dependencies {
     implementation(libs.exoplayer.ui)
     implementation(libs.exoplayer.core)
     implementation(libs.androidx.navigation.compose)
+    implementation(libs.activity.compose)
 
 }
 

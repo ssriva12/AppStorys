@@ -14,6 +14,22 @@ data class TrackAction(
     val widget_image: String?
 )
 
+data class ReelStatusRequest(
+    val user_id: String,
+    val action: String,
+    val reel: String
+)
+
+
+data class ReelActionRequest(
+    val user_id: String,
+    val event_type: String,
+    val reel_id: String,
+    val campaign_id: String,
+)
+
+
+
 
 data class ValidateAccountResponse(
     val access_token: String
@@ -33,7 +49,6 @@ data class TrackUserRequest(
     val campaign_list: List<String>,
      val attributes: List<Map<String, Any>>?
 )
-//Campaign Data
 
 data class CampaignResponse(
     val user_id: String,
@@ -141,4 +156,21 @@ data class CsatFeedbackPostRequest(
     val rating: Int,
     val feedback_option: String? = null,
     val additional_comments: String = ""
+)
+
+data class ReelsDetails(
+    val id: String,
+    val reels: List<Reel>
+) : Details()
+
+
+data class Reel(
+    val id: String,
+    @SerializedName("button_text") val buttonText: String,
+    val order: Int,
+    @SerializedName("description_text") val descriptionText: String,
+    val video: String,
+    val likes: Int,
+    val thumbnail: String,
+    val link: String
 )

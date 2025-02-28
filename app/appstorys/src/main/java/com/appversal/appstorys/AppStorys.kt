@@ -7,6 +7,9 @@ import android.net.Uri
 import android.util.Log
 import android.util.Patterns
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.clickable
@@ -40,6 +43,7 @@ import com.appversal.appstorys.api.CSATDetails
 import com.appversal.appstorys.api.Campaign
 import com.appversal.appstorys.api.CsatFeedbackPostRequest
 import com.appversal.appstorys.api.FloaterDetails
+import com.appversal.appstorys.api.ReelsDetails
 import com.appversal.appstorys.api.RetrofitClient
 import com.appversal.appstorys.api.TrackAction
 import com.appversal.appstorys.api.WidgetDetails
@@ -48,15 +52,16 @@ import com.appversal.appstorys.ui.AutoSlidingCarousel
 import com.appversal.appstorys.ui.CarousalImage
 import com.appversal.appstorys.ui.CsatDialog
 import com.appversal.appstorys.ui.DoubleWidgets
+import com.appversal.appstorys.ui.FullScreenVideoScreen
 import com.appversal.appstorys.ui.ImageCard
 import com.appversal.appstorys.ui.OverlayFloater
+import com.appversal.appstorys.ui.ReelsRow
 import com.appversal.appstorys.ui.ShowcaseHighlight
 import com.appversal.appstorys.ui.ShowcaseView
 import com.appversal.appstorys.ui.TooltipContent
 import com.appversal.appstorys.ui.TooltipPopup
 import com.appversal.appstorys.ui.TooltipPopupPosition
 import com.appversal.appstorys.ui.calculateTooltipPopupPosition
-import com.appversal.appstorys.utils.removeDoubleQuotes
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -65,6 +70,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import androidx.activity.compose.BackHandler
+import com.appversal.appstorys.api.ReelActionRequest
+import com.appversal.appstorys.api.ReelStatusRequest
 
 class AppStorys private constructor(
     private val context: Application,
@@ -81,14 +89,20 @@ class AppStorys private constructor(
     private val _disabledCampaigns = MutableStateFlow<List<String>>(emptyList())
     private val disabledCampaigns: StateFlow<List<String>> get() = _disabledCampaigns
 
-    private val _impressionsImages = MutableStateFlow<List<String>>(emptyList())
-    private val impressionsImages: StateFlow<List<String>> get() = _impressionsImages
+    private val _impressions = MutableStateFlow<List<String>>(emptyList())
+    private val impressions: StateFlow<List<String>> get() = _impressions
 
     private val _targets = MutableStateFlow<Map<String, LayoutCoordinates>>(emptyMap())
     private val targets: StateFlow<Map<String, LayoutCoordinates>> = _targets.asStateFlow()
 
     private val _showcaseVisible = MutableStateFlow(false)
     private val showcaseVisible: StateFlow<Boolean> = _showcaseVisible.asStateFlow()
+
+    private val _selectedReelIndex = MutableStateFlow<Int>(0)
+    private val selectedReelIndex: StateFlow<Int> = _selectedReelIndex.asStateFlow()
+
+    private val _reelFullScreenVisible = MutableStateFlow(false)
+    private val reelFullScreenVisible: StateFlow<Boolean> = _reelFullScreenVisible.asStateFlow()
 
     private val apiService = RetrofitClient.apiService
     private val repository = ApiRepository(apiService)
@@ -121,8 +135,7 @@ class AppStorys private constructor(
             Log.d("campaignList", campaignList.toString())
 
             if (campaignList.isNotEmpty()) {
-                val campaignsData =
-                    repository.getCampaignData(accessToken, userId, campaignList, attributes)
+                val campaignsData = repository.getCampaignData(accessToken, userId, campaignList, attributes)
                 Log.d("campaignsData", campaignsData.toString())
 
                 campaignsData?.campaigns?.let { _campaigns.emit(it) }
@@ -137,7 +150,7 @@ class AppStorys private constructor(
             if (accessToken.isNotEmpty()) {
                 if (currentScreen != screenName) {
                     _disabledCampaigns.emit(emptyList())
-                    _impressionsImages.emit(emptyList())
+                    _impressions.emit(emptyList())
                     currentScreen = screenName
                 }
                 val campaignList = repository.getCampaigns(accessToken, currentScreen, positionList)
@@ -315,6 +328,100 @@ class AppStorys private constructor(
         }
     }
 
+
+
+    @Composable
+    fun ReelsHorizontalRow(modifier: Modifier = Modifier){
+        val campaignsData = campaigns.collectAsStateWithLifecycle()
+
+        val campaign = campaignsData.value.firstOrNull { it.campaignType == "REL" && it.details is ReelsDetails }
+        val reelsDetails = campaign?.details as ReelsDetails ?: null
+
+        if (reelsDetails != null){
+
+            ReelsRow(
+                modifier = modifier,
+                reels = reelsDetails.reels,
+                onReelClick = { index ->
+                    coroutineScope.launch {
+                        _selectedReelIndex.emit(index)
+                        _reelFullScreenVisible.emit(true)
+                    }
+                }
+            )
+        }
+    }
+
+    @Composable
+    fun ReelFullScreen(){
+        val selectedReelIndex by selectedReelIndex.collectAsStateWithLifecycle()
+        val visibility by reelFullScreenVisible.collectAsStateWithLifecycle()
+
+
+        val campaignsData = campaigns.collectAsStateWithLifecycle()
+
+        val campaign = campaignsData.value.firstOrNull { it.campaignType == "REL" && it.details is ReelsDetails }
+        val reelsDetails = campaign?.details as ReelsDetails ?: null
+
+        if (reelsDetails != null){
+            BackHandler() {
+                coroutineScope.launch {
+                    _selectedReelIndex.emit(0)
+                    _reelFullScreenVisible.emit(false)
+                }
+            }
+
+            AnimatedVisibility(
+                visible = visibility,
+                enter = fadeIn(tween(700)),
+                exit = fadeOut(tween(700))
+            ) {
+                FullScreenVideoScreen(
+                    reels = reelsDetails.reels,
+                    startIndex = selectedReelIndex,
+                    sendLikesStatus = {
+                        if (!_impressions.value.contains(it.first.id)){
+                            coroutineScope.launch {
+                                val impressions = ArrayList(impressions.value)
+                                impressions.add(it.first.id)
+                                _impressions.emit(impressions)
+
+                                repository.sendReelLikeStatus(
+                                    accessToken = accessToken,
+                                    actions = ReelStatusRequest(
+                                        user_id = userId,
+                                        action = it.second,
+                                        reel = it.first.id
+                                    )
+                                )
+                            }
+                        }
+                    },
+                    sendEvents = {
+                        coroutineScope.launch {
+                            repository.trackReelActions(
+                                accessToken = accessToken,
+                                actions = ReelActionRequest(
+                                    user_id = userId,
+                                    reel_id = it.first.id,
+                                    event_type = it.second,
+                                    campaign_id = campaign.id
+                                )
+                            )
+                        }
+                    },
+                    onBack = {
+                        coroutineScope.launch {
+                            _selectedReelIndex.emit(0)
+                            _reelFullScreenVisible.emit(false)
+                        }
+                    }
+                )
+            }
+        }
+    }
+
+
     @Composable
     fun PinnedBanner(
         modifier: Modifier = Modifier,
@@ -392,7 +499,7 @@ class AppStorys private constructor(
         val campaignsData = campaigns.collectAsStateWithLifecycle()
         val campaign = campaignsData.value
             .filter { it.campaignType == "WID" && it.details is WidgetDetails }
-            .firstOrNull { it.position?.removeDoubleQuotes() == position.toString() }
+            .firstOrNull { it.position == position.toString() }
 
         if (campaign != null) {
             val widgetDetails = campaign?.details as WidgetDetails ?: null
@@ -431,9 +538,7 @@ class AppStorys private constructor(
         val campaignsData = campaigns.collectAsStateWithLifecycle()
         val disabledCampaigns = disabledCampaigns.collectAsStateWithLifecycle()
         val campaign = campaignsData.value
-            .filter {
-                it.campaignType == "WID" && it.details is WidgetDetails && it.position?.removeDoubleQuotes() == position.toString()
-            }
+            .filter { it.campaignType == "WID" && it.details is WidgetDetails && it.position == position.toString() }
             .firstOrNull { (it.details as WidgetDetails).type == "full" }
 
         val widgetDetails = (campaign?.details as? WidgetDetails)
@@ -494,9 +599,7 @@ class AppStorys private constructor(
         val disabledCampaigns = disabledCampaigns.collectAsStateWithLifecycle()
 
         val campaign = campaignsData.value
-            .filter {
-                it.campaignType == "WID" && it.details is WidgetDetails && it.position?.removeDoubleQuotes() == position.toString()
-            }
+            .filter { it.campaignType == "WID" && it.details is WidgetDetails && it.position == position.toString() }
             .firstOrNull { (it.details as WidgetDetails).type == "half" }
 
 
@@ -588,8 +691,9 @@ class AppStorys private constructor(
         }
 
         trackCampaignActions(campaignId, "CLK", widgetImageId)
-
     }
+
+
 
     private fun List<WidgetImage>.turnToPair(): List<Pair<WidgetImage, WidgetImage>> {
         // Sort by order and pair consecutive elements
@@ -609,18 +713,18 @@ class AppStorys private constructor(
     ) {
         coroutineScope.launch {
             if (eventType != "CLK") {
-                if (widgetImageId != null && !impressionsImages.value.contains(widgetImageId)) {
-                    val impressions = ArrayList(impressionsImages.value)
+                if (widgetImageId != null && !impressions.value.contains(widgetImageId)) {
+                    val impressions = ArrayList(impressions.value)
                     impressions.add(widgetImageId)
-                    _impressionsImages.emit(impressions)
+                    _impressions.emit(impressions)
                     repository.trackActions(
                         accessToken,
                         TrackAction(campId, userId, eventType, widgetImageId)
                     )
-                } else if (!impressionsImages.value.contains(campId)) {
-                    val impressions = ArrayList(impressionsImages.value)
+                } else if (!impressions.value.contains(campId)) {
+                    val impressions = ArrayList(impressions.value)
                     impressions.add(campId)
-                    _impressionsImages.emit(impressions)
+                    _impressions.emit(impressions)
                     repository.trackActions(
                         accessToken,
                         TrackAction(campId, userId, eventType, null)
@@ -641,9 +745,14 @@ class AppStorys private constructor(
     }
 
     private fun openUrl(url: String) {
-        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
-        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
-        context.startActivity(intent)
+        try {
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
+            context.startActivity(intent)
+        }catch (_: Exception){
+
+        }
+
     }
 
     companion object {
