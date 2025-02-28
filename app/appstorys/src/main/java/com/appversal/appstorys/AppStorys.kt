@@ -335,7 +335,7 @@ class AppStorys private constructor(
         val campaignsData = campaigns.collectAsStateWithLifecycle()
 
         val campaign = campaignsData.value.firstOrNull { it.campaignType == "REL" && it.details is ReelsDetails }
-        val reelsDetails = campaign?.details as ReelsDetails ?: null
+        val reelsDetails = campaign?.details as? ReelsDetails
 
         if (reelsDetails != null){
 
@@ -361,7 +361,7 @@ class AppStorys private constructor(
         val campaignsData = campaigns.collectAsStateWithLifecycle()
 
         val campaign = campaignsData.value.firstOrNull { it.campaignType == "REL" && it.details is ReelsDetails }
-        val reelsDetails = campaign?.details as ReelsDetails ?: null
+        val reelsDetails = campaign?.details as? ReelsDetails
 
         if (reelsDetails != null){
             BackHandler() {
@@ -500,9 +500,9 @@ class AppStorys private constructor(
         val campaign = campaignsData.value
             .filter { it.campaignType == "WID" && it.details is WidgetDetails }
             .firstOrNull { it.position == position.toString() }
+        val widgetDetails = campaign?.details as? WidgetDetails
 
-        if (campaign != null) {
-            val widgetDetails = campaign?.details as WidgetDetails ?: null
+        if (widgetDetails != null) {
 
             if (widgetDetails?.type == "full") {
 
