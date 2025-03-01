@@ -1,6 +1,7 @@
 package com.appversal.appstorys
 
 import android.app.Application
+import android.content.Context
 import android.content.Intent
 import android.graphics.drawable.Drawable
 import android.net.Uri
@@ -79,6 +80,9 @@ import com.appversal.appstorys.api.ReelStatusRequest
 import com.appversal.appstorys.api.StoryGroup
 import com.appversal.appstorys.api.TrackActionStories
 import com.appversal.appstorys.ui.StoryAppMain
+import com.appversal.appstorys.ui.getLikedReels
+import com.appversal.appstorys.ui.saveLikedReels
+import com.appversal.appstorys.ui.saveViewedStories
 
 class AppStorys private constructor(
     private val context: Application,
@@ -341,7 +345,7 @@ class AppStorys private constructor(
         val storiesDetails = (campaign?.details as? List<*>)?.filterIsInstance<StoryGroup>()
 
         if (!storiesDetails.isNullOrEmpty()){
-            StoryAppMain(storyGroups = storiesDetails, sendEvent =  {
+            StoryAppMain(apiStoryGroups = storiesDetails, sendEvent =  {
                 coroutineScope.launch {
                     repository.trackStoriesActions(accessToken, TrackActionStories(
                         campaign_id = campaign.id,
@@ -380,7 +384,10 @@ class AppStorys private constructor(
                 )
 
                 if (visibility){
-                    ReelFullScreen(campaignId = campaign.id, reelsDetails = reelsDetails, selectedReelIndex = selectedReelIndex){
+                    ReelFullScreen(
+                        campaignId = campaign.id,
+                        reelsDetails = reelsDetails,
+                        selectedReelIndex = selectedReelIndex){
                         coroutineScope.launch {
                             _selectedReelIndex.emit(0)
                             _reelFullScreenVisible.emit(false)
@@ -395,6 +402,7 @@ class AppStorys private constructor(
     @Composable
     private fun ReelFullScreen(campaignId: String, reelsDetails: ReelsDetails, selectedReelIndex: Int, onDismiss : () -> Unit){
 
+        var likedReels by remember { mutableStateOf(getLikedReels(context.getSharedPreferences("AppStory", Context.MODE_PRIVATE))) }
 
         Dialog(
             onDismissRequest = onDismiss,
@@ -414,6 +422,7 @@ class AppStorys private constructor(
 
             FullScreenVideoScreen(
                 reels = reelsDetails.reels,
+                likedReels = likedReels,
                 startIndex = selectedReelIndex,
                 sendLikesStatus = {
                     if (!_impressions.value.contains(it.first.id)){
@@ -421,6 +430,18 @@ class AppStorys private constructor(
                             val impressions = ArrayList(impressions.value)
                             impressions.add(it.first.id)
                             _impressions.emit(impressions)
+
+                            if (it.second == "like"){
+                                val list = ArrayList(likedReels)
+                                list.add(it.first.id)
+                                likedReels = list
+                                saveLikedReels(idList = list, sharedPreferences = context.getSharedPreferences("AppStory", Context.MODE_PRIVATE))
+                            }else{
+                                val list = ArrayList(likedReels)
+                                list.remove(it.first.id)
+                                likedReels = list
+                                saveLikedReels(idList = list, sharedPreferences = context.getSharedPreferences("AppStory", Context.MODE_PRIVATE))
+                            }
 
                             repository.sendReelLikeStatus(
                                 accessToken = accessToken,

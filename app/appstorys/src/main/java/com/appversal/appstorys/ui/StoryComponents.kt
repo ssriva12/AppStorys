@@ -1,6 +1,8 @@
 package com.appversal.appstorys.ui
 
+import android.content.Context
 import android.content.Intent
+import android.content.SharedPreferences
 import android.net.Uri
 import android.util.Log
 import androidx.compose.foundation.Canvas
@@ -40,10 +42,14 @@ import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.ViewConfiguration
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.net.toUri
+import com.appversal.appstorys.R
 import com.appversal.appstorys.api.StoryGroup
 import com.appversal.appstorys.api.StorySlide
 import com.google.android.exoplayer2.ExoPlayer
@@ -54,24 +60,32 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import org.json.JSONArray
 import kotlin.coroutines.cancellation.CancellationException
 
 @Composable
-internal fun StoryCircles(storyGroups: List<StoryGroup>, onStoryClick: (StoryGroup) -> Unit) {
+internal fun StoryCircles(storyGroups: List<StoryGroup>, onStoryClick: (StoryGroup) -> Unit, viewedStories: List<String>) {
     // Sort story groups by order
-    val sortedStoryGroups = remember(storyGroups) {
-        storyGroups.sortedBy { it.order }
+//    val sortedStoryGroups = remember(storyGroups) {
+//        storyGroups.sortedBy { it.order }
+//    }
+    val sortedStoryGroups = remember(storyGroups, viewedStories) {
+        storyGroups.sortedWith(
+            compareByDescending<StoryGroup> { it.id !in viewedStories }
+                .thenBy { it.order }
+        )
     }
 
     LazyRow(
         modifier = Modifier
             .fillMaxWidth()
             .padding(8.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         items(sortedStoryGroups.size) { index ->
             val storyGroup = sortedStoryGroups[index]
             StoryItem(
+                isStoryGroupViewed = viewedStories.contains(storyGroup.id),
                 imageUrl = storyGroup.thumbnail,
                 username = storyGroup.name,
                 ringColor = Color(android.graphics.Color.parseColor(storyGroup.ringColor)),
@@ -84,6 +98,7 @@ internal fun StoryCircles(storyGroups: List<StoryGroup>, onStoryClick: (StoryGro
 
 @Composable
 internal fun StoryItem(
+    isStoryGroupViewed: Boolean,
     imageUrl: String,
     username: String,
     ringColor: Color,
@@ -104,7 +119,7 @@ internal fun StoryItem(
                 modifier = Modifier.size(80.dp)
             ) {
                 drawCircle(
-                    color = ringColor,
+                    color = if (isStoryGroupViewed) Color.Gray else ringColor,
                     style = Stroke(width = 5f),
                     radius = size.minDimension / 2
                 )
@@ -121,7 +136,7 @@ internal fun StoryItem(
             )
         }
         Spacer(modifier = Modifier.height(4.dp))
-        Text(text = username, fontSize = 12.sp, color = nameColor)
+        Text(modifier = Modifier.width(60.dp).align(Alignment.CenterHorizontally), text = username, maxLines = 2, fontSize = 12.sp, color = nameColor, textAlign = TextAlign.Center, lineHeight = 15.sp)
     }
 }
 
@@ -137,6 +152,7 @@ internal fun StoryScreen(
     val uriHandler = LocalUriHandler.current
     val context = LocalContext.current
     var isHolding by remember { mutableStateOf(false) }
+    var isMuted by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
 
 
@@ -334,12 +350,13 @@ internal fun StoryScreen(
                     }
 
                     LinearProgressIndicator(
-                        progress = progressValue,
+                        progress = { progressValue },
                         modifier = Modifier
                             .weight(1f)
                             .height(4.dp),
                         color = Color.White,
-                        trackColor = Color.Gray.copy(alpha = 0.5f)
+                        trackColor = Color.Gray.copy(alpha = 0.5f),
+                        drawStopIndicator = {}
                     )
                 }
             }
@@ -381,14 +398,24 @@ internal fun StoryScreen(
                     .padding(8.dp),
                 horizontalArrangement = Arrangement.End
             ) {
-                // Mute button
-//                IconButton(onClick = { isMuted = !isMuted }) {
-//                    Icon(
-//                        imageVector = if (isMuted) Icons.Default.VolumeOff else Icons.Default.VolumeUp,
-//                        contentDescription = if (isMuted) "Unmute" else "Mute",
-//                        tint = Color.White
-//                    )
-//                }
+                if (!isImage){
+                    IconButton(onClick = {
+                        isMuted = !isMuted
+                        if (isMuted){
+                            exoPlayer.volume = 0f
+                        }else{
+                            exoPlayer.volume = 1f
+                        }
+                    }) {
+
+                        Icon(
+                            painter = if (isMuted) painterResource(R.drawable.mute) else painterResource(R.drawable.volume),
+                            contentDescription = if (isMuted) "Unmute" else "Mute",
+                            tint = Color.White
+                        )
+                    }
+                }
+
 
                 // Share button
                 IconButton(onClick = shareContent) {
@@ -479,14 +506,18 @@ internal fun StoryScreen(
 }
 
 @Composable
-internal fun StoriesApp(storyGroups: List<StoryGroup>, sendEvent: (Pair<StorySlide, String>) -> Unit) {
+internal fun StoriesApp(storyGroups: List<StoryGroup>, sendEvent: (Pair<StorySlide, String>) -> Unit, viewedStories: List<String>, storyViewed: (String) -> Unit) {
     var selectedStoryGroup by remember { mutableStateOf<StoryGroup?>(null) }
 
     Box(modifier = Modifier.fillMaxSize()) {
         StoryCircles(
+            viewedStories = viewedStories,
             storyGroups = storyGroups,
             onStoryClick = { storyGroup ->
                 selectedStoryGroup = storyGroup
+                selectedStoryGroup?.let{
+                    storyViewed(selectedStoryGroup!!.id)
+                }
             }
         )
 
@@ -500,6 +531,9 @@ internal fun StoriesApp(storyGroups: List<StoryGroup>, sendEvent: (Pair<StorySli
                         if (currentIndex < storyGroups.lastIndex) {
                             selectedStoryGroup = null // Reset first
                             selectedStoryGroup = storyGroups[currentIndex + 1]
+                            selectedStoryGroup?.let{
+                                storyViewed(selectedStoryGroup!!.id)
+                            }
                         } else {
                             selectedStoryGroup = null
                         }
@@ -513,9 +547,40 @@ internal fun StoriesApp(storyGroups: List<StoryGroup>, sendEvent: (Pair<StorySli
 
 // Example usage with your data
 @Composable
-internal fun StoryAppMain(storyGroups: List<StoryGroup>, sendEvent: (Pair<StorySlide, String>) -> Unit) {
+internal fun StoryAppMain(apiStoryGroups: List<StoryGroup>, sendEvent: (Pair<StorySlide, String>) -> Unit) {
 
-    StoriesApp(storyGroups = storyGroups, sendEvent = sendEvent)
+    val context = LocalContext.current
+    var viewedStories by remember { mutableStateOf(getViewedStories(context.getSharedPreferences("AppStory", Context.MODE_PRIVATE))) }
+    var storyGroups by remember { mutableStateOf(apiStoryGroups.sortedWith(
+        compareByDescending<StoryGroup> { it.id !in viewedStories }
+            .thenBy { it.order })) }
+
+    LaunchedEffect(viewedStories) {
+        storyGroups = storyGroups.sortedWith(
+            compareByDescending<StoryGroup> { it.id !in viewedStories }
+                .thenBy { it.order }
+        )
+    }
+
+    StoriesApp(storyGroups = storyGroups, sendEvent = sendEvent, viewedStories = viewedStories, storyViewed =  {
+        if (!viewedStories.contains(it)){
+            val list = ArrayList(viewedStories)
+            list.add(it)
+            viewedStories = list
+            saveViewedStories(idList = list, sharedPreferences = context.getSharedPreferences("AppStory", Context.MODE_PRIVATE))
+        }
+    })
+}
+
+internal fun saveViewedStories(idList: List<String>, sharedPreferences: SharedPreferences) {
+    val jsonArray = JSONArray(idList)
+    sharedPreferences.edit().putString("VIEWED_STORIES", jsonArray.toString()).apply()
+}
+
+internal fun getViewedStories(sharedPreferences: SharedPreferences): List<String> {
+    val jsonString = sharedPreferences.getString("VIEWED_STORIES", "[]") ?: "[]"
+    val jsonArray = JSONArray(jsonString)
+    return List(jsonArray.length()) { jsonArray.getString(it) }
 }
 
 /*

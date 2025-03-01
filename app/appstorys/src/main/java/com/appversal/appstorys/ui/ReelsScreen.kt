@@ -1,6 +1,8 @@
 package com.appversal.appstorys.ui
 
+import android.content.SharedPreferences
 import android.net.Uri
+import android.util.Log
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -28,6 +30,7 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Share
 import com.appversal.appstorys.api.Reel
+import org.json.JSONArray
 
 
 @Composable
@@ -60,7 +63,7 @@ internal fun ReelsRow(modifier : Modifier, reels: List<Reel>, onReelClick: (Int)
 }
 
 @Composable
-internal fun FullScreenVideoScreen(reels: List<Reel>, startIndex: Int, onBack: () -> Unit, sendLikesStatus: (Pair<Reel, String>) -> Unit, sendEvents: (Pair<Reel, String>) -> Unit) {
+internal fun FullScreenVideoScreen(reels: List<Reel>, likedReels: List<String>, startIndex: Int, onBack: () -> Unit, sendLikesStatus: (Pair<Reel, String>) -> Unit, sendEvents: (Pair<Reel, String>) -> Unit) {
     val screenHeight = getScreenHeight().dp
     val pagerState = rememberPagerState(initialPage = startIndex, pageCount = { reels.size })
     val context = LocalContext.current
@@ -78,6 +81,7 @@ internal fun FullScreenVideoScreen(reels: List<Reel>, startIndex: Int, onBack: (
 
     val players = remember {
         reels.map { reel ->
+
             ExoPlayer.Builder(context).build().apply {
                 setMediaItem(MediaItem.fromUri(Uri.parse(reel.video)))
                 repeatMode = Player.REPEAT_MODE_ONE
@@ -88,8 +92,8 @@ internal fun FullScreenVideoScreen(reels: List<Reel>, startIndex: Int, onBack: (
 
     // Handle play/pause when the page changes
     LaunchedEffect(pagerState.currentPage) {
-        players.forEach { it.playWhenReady = false } // Pause all videos
-        players[pagerState.currentPage].playWhenReady = true // Play current video
+        players.forEach { it.playWhenReady = false }
+        players[pagerState.currentPage].playWhenReady = true
         sendEvents(Pair(reels[pagerState.currentPage], "IMP"))
     }
 
@@ -122,9 +126,10 @@ internal fun FullScreenVideoScreen(reels: List<Reel>, startIndex: Int, onBack: (
                         PlayerView(it).apply {
                             player = players[page]
                             useController = false // Hide controls
+
                         }
                     },
-                    modifier = Modifier.fillMaxSize()
+                    modifier = Modifier.fillMaxSize(),
                 )
 
                 // UI Controls overlay
@@ -148,20 +153,20 @@ internal fun FullScreenVideoScreen(reels: List<Reel>, startIndex: Int, onBack: (
                             Column(
                                 horizontalAlignment = Alignment.CenterHorizontally,
                                 modifier = Modifier.clickable {
-                                    isLikedState[page].value = !isLikedState[page].value
-                                    if (isLikedState[page].value) {
+                                    //isLikedState[page].value = !isLikedState[page].value
+                                    if (!likedReels.contains(reels[page].id)) {
                                         likesState[page].value += 1
                                     } else {
                                         likesState[page].value -= 1
                                     }
 
-                                    sendLikesStatus(Pair(reels[page],if ( isLikedState[page].value) "like" else "unlike"))
+                                    sendLikesStatus(Pair(reels[page],if ( !likedReels.contains(reels[page].id)) "like" else "unlike"))
                                 }
                             ) {
                                 Icon(
                                     imageVector = androidx.compose.material.icons.Icons.Default.Favorite,
                                     contentDescription = "Like",
-                                    tint = if (isLikedState[page].value) Color.Green else Color.White,
+                                    tint = if (likedReels.contains(reels[page].id)) Color.Green else Color.White,
                                     modifier = Modifier.size(32.dp)
                                 )
                                 Text(
@@ -288,6 +293,16 @@ internal fun FullScreenVideoScreen(reels: List<Reel>, startIndex: Int, onBack: (
 }
 
 
+internal fun saveLikedReels(idList: List<String>, sharedPreferences: SharedPreferences) {
+    val jsonArray = JSONArray(idList)
+    sharedPreferences.edit().putString("LIKED_REELS", jsonArray.toString()).apply()
+}
+
+internal fun getLikedReels(sharedPreferences: SharedPreferences): List<String> {
+    val jsonString = sharedPreferences.getString("LIKED_REELS", "[]") ?: "[]"
+    val jsonArray = JSONArray(jsonString)
+    return List(jsonArray.length()) { jsonArray.getString(it) }
+}
 
 @Composable
 fun getScreenHeight(): Int {
