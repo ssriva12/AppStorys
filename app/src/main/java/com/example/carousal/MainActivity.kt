@@ -6,12 +6,15 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.material3.Button
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import com.example.carousal.ui.theme.CarousalTheme
 
@@ -51,15 +54,42 @@ fun MyApp() {
                     .background(Color(0xFFFAF8F9)),
             ) {
 
-                campaignManager.ReelsHorizontalRow(modifier = Modifier.align(Alignment.Center))
-
-
-
+                AllCampaigns()
 
             }
         }
 
-        campaignManager.ReelFullScreen()
+    }
+
+}
+
+@Composable
+fun AllCampaigns(){
+    val campaignManager = App.appStorys
+    val context = LocalContext.current
+    Box{
+        LazyColumn(modifier = Modifier.fillMaxSize()) {
+
+            item{
+                campaignManager.PinnedBanner(placeHolder = context.getDrawable(R.drawable.ic_launcher_foreground), position = null)
+            }
+
+            item{
+                campaignManager.Widget(placeHolder = context.getDrawable(R.drawable.ic_launcher_foreground), position = null)
+            }
+
+            item{
+                campaignManager.Reels()
+            }
+
+
+            item{
+                campaignManager.Stories()
+            }
+        }
+
+        campaignManager.Floater(boxModifier = Modifier.align(Alignment.BottomCenter))
+        campaignManager.CSAT(modifier = Modifier.align(Alignment.BottomCenter))
     }
 
 }

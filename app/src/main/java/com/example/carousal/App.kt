@@ -13,11 +13,17 @@ class App : Application() {
             mapOf("name" to "Charlie", "age" to 22)
         )
 
+        //1163a1a2-61a8-486c-b263-7252f9a502c2
+        //5bb1378d-9f32-4da8-aed1-1ee44d086db7
+
+        //afadf960-3975-4ba2-933b-fac71ccc2002
+        //13555479-077f-445e-87f0-e6eae2e215c5
+
         // Initialize CampaignManager with userId and appId
         appStorys = AppStorys.getInstance(
             this,
-            appId = "1163a1a2-61a8-486c-b263-7252f9a502c2", // Replace with App Id
-            accountId = "5bb1378d-9f32-4da8-aed1-1ee44d086db7", // Replace with Account Id
+            appId = "afadf960-3975-4ba2-933b-fac71ccc2002", // Replace with App Id
+            accountId = "13555479-077f-445e-87f0-e6eae2e215c5", // Replace with Account Id
             userId = "cheqtest",// Replace with User Id
             attributes = attributes,
             navigateToScreen =

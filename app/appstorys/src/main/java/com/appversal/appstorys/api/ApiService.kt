@@ -51,6 +51,13 @@ internal interface ApiService {
         @Body request: ReelActionRequest
     )
 
+
+    @POST("api/v1/users/track-action/")
+    suspend fun trackStoriesAction(
+        @Header("Authorization") token: String,
+        @Body request: TrackActionStories
+    )
+
 }
 
 internal sealed class ApiResult<out T> {

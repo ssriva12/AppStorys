@@ -119,4 +119,18 @@ internal class ApiRepository(private val apiService: ApiService) {
             }
         }
     }
+
+    suspend fun trackStoriesActions(accessToken: String, actions: TrackActionStories) {
+        withContext(Dispatchers.IO) {
+            when (val result = safeApiCall {
+                apiService.trackStoriesAction(
+                    token = "Bearer $accessToken",
+                    request = actions
+                )
+            }) {
+                is ApiResult.Error -> println("Error tracking actions: ${result.message}")
+                else -> Unit // No need to handle success for void functions
+            }
+        }
+    }
 }

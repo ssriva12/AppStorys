@@ -76,6 +76,9 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.appversal.appstorys.api.ReelActionRequest
 import com.appversal.appstorys.api.ReelStatusRequest
+import com.appversal.appstorys.api.StoryGroup
+import com.appversal.appstorys.api.TrackActionStories
+import com.appversal.appstorys.ui.StoryAppMain
 
 class AppStorys private constructor(
     private val context: Application,
@@ -175,7 +178,7 @@ class AppStorys private constructor(
     fun CSAT(
         modifier: Modifier = Modifier,
         displayDelaySeconds: Long = 10,
-        position: String?
+        position: String? = null
     ) {
         if (!showCsat) {
             val campaignsData = campaigns.collectAsStateWithLifecycle()
@@ -329,6 +332,29 @@ class AppStorys private constructor(
                 highlight = ShowcaseHighlight.Circular()
             )
         }
+    }
+
+    @Composable
+    fun Stories(){
+        val campaignsData = campaigns.collectAsStateWithLifecycle()
+        val campaign = campaignsData.value.firstOrNull { it.campaignType == "STR" }
+        val storiesDetails = (campaign?.details as? List<*>)?.filterIsInstance<StoryGroup>()
+
+        if (!storiesDetails.isNullOrEmpty()){
+            StoryAppMain(storyGroups = storiesDetails, sendEvent =  {
+                coroutineScope.launch {
+                    repository.trackStoriesActions(accessToken, TrackActionStories(
+                        campaign_id = campaign.id,
+                        user_id = userId,
+                        story_slide = it.first.id,
+                        event_type = it.second
+                    ))
+                }
+            }
+            )
+
+        }
+
     }
 
     @Composable
@@ -506,14 +532,14 @@ class AppStorys private constructor(
         position: String?
     ) {
         val campaignsData = campaigns.collectAsStateWithLifecycle()
-        val campaign = campaignsData.value
-            .filter { it.campaignType == "WID" && it.details is WidgetDetails }
-            .firstOrNull { it.position == position.toString() }
+        val campaign = campaignsData.value.filter { it.campaignType == "WID" && it.details is WidgetDetails }
+            .firstOrNull { it.position == position }
         val widgetDetails = campaign?.details as? WidgetDetails
+        Log.i("widgetDetails", campaign.toString())
 
         if (widgetDetails != null) {
 
-            if (widgetDetails?.type == "full") {
+            if (widgetDetails.type == "full") {
 
 
                 FullWidget(
@@ -524,7 +550,7 @@ class AppStorys private constructor(
                     position = position
                 )
 
-            } else if (widgetDetails?.type == "half") {
+            } else if (widgetDetails.type == "half") {
                 DoubleWidget(
                     modifier = modifier,
                     staticHeight = staticHeight,
@@ -547,7 +573,7 @@ class AppStorys private constructor(
         val campaignsData = campaigns.collectAsStateWithLifecycle()
         val disabledCampaigns = disabledCampaigns.collectAsStateWithLifecycle()
         val campaign = campaignsData.value
-            .filter { it.campaignType == "WID" && it.details is WidgetDetails && it.position == position.toString() }
+            .filter { it.campaignType == "WID" && it.details is WidgetDetails && it.position == position }
             .firstOrNull { (it.details as WidgetDetails).type == "full" }
 
         val widgetDetails = (campaign?.details as? WidgetDetails)
@@ -608,7 +634,7 @@ class AppStorys private constructor(
         val disabledCampaigns = disabledCampaigns.collectAsStateWithLifecycle()
 
         val campaign = campaignsData.value
-            .filter { it.campaignType == "WID" && it.details is WidgetDetails && it.position == position.toString() }
+            .filter { it.campaignType == "WID" && it.details is WidgetDetails && it.position == position }
             .firstOrNull { (it.details as WidgetDetails).type == "half" }
 
 

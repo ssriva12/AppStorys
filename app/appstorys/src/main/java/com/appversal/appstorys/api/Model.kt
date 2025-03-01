@@ -21,14 +21,19 @@ data class ReelStatusRequest(
 )
 
 
+data class TrackActionStories(
+    val campaign_id: String,
+    val user_id: String,
+    val event_type: String,
+    val story_slide: String
+)
+
 data class ReelActionRequest(
     val user_id: String,
     val event_type: String,
     val reel_id: String,
     val campaign_id: String,
 )
-
-
 
 
 data class ValidateAccountResponse(
@@ -47,7 +52,7 @@ data class TrackScreenResponse(
 data class TrackUserRequest(
     val user_id: String,
     val campaign_list: List<String>,
-     val attributes: List<Map<String, Any>>?
+    val attributes: List<Map<String, Any>>?
 )
 
 data class CampaignResponse(
@@ -58,11 +63,30 @@ data class CampaignResponse(
 data class Campaign(
     val id: String,
     @SerializedName("campaign_type") val campaignType: String,
-    val details: Details?,
+    val details: Any?,
     val position: String?
 )
 
-sealed class Details
+
+data class StoryGroup(
+    val id: String,
+    val name: String,
+    val thumbnail: String,
+    val ringColor: String,
+    val nameColor: String,
+    val order: Int,
+    val slides: List<StorySlide>
+)
+
+data class StorySlide(
+    val id: String,
+    val parent: String,
+    val image: String?,
+    val video: String?,
+    val link: String,
+    @SerializedName("button_text") val buttonText: String,
+    val order: Int
+)
 
 data class BannerDetails(
     val id: String,
@@ -72,7 +96,7 @@ data class BannerDetails(
     val link: String,
     val styling: Styling?,
     val lottie_data: String?
-) : Details()
+)
 
 data class Styling(
     val isClose: Boolean,
@@ -92,7 +116,7 @@ data class WidgetDetails(
     val campaign: String,
     val screen: String,
     val styling: Styling?
-) : Details()
+)
 
 data class WidgetImage(
     val id: String,
@@ -114,7 +138,7 @@ data class CSATDetails(
     @SerializedName("feedback_option") val feedbackOption: FeedbackOption,
     val campaign: String,
     val link: String
-) : Details()
+)
 
 data class FloaterDetails(
     val id: String,
@@ -124,14 +148,14 @@ data class FloaterDetails(
     val link: String,
     val position: String?,
     val campaign: String
-) : Details()
+)
 
 
 data class FeedbackOption(
     val option1: String,
     val option2: String,
     val option3: String
-){
+) {
     fun toList(): List<String> = listOf(option1, option2, option3).filter { it.isNotBlank() }
 }
 
@@ -152,7 +176,7 @@ data class CSATStyling(
 
 data class CsatFeedbackPostRequest(
     val csat: String,
-    val user_id : String,
+    val user_id: String,
     val rating: Int,
     val feedback_option: String? = null,
     val additional_comments: String = ""
@@ -161,7 +185,7 @@ data class CsatFeedbackPostRequest(
 data class ReelsDetails(
     val id: String,
     val reels: List<Reel>
-) : Details()
+)
 
 
 data class Reel(

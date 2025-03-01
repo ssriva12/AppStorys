@@ -1,16 +1,21 @@
 package com.appversal.appstorys.api
 
 import com.appversal.appstorys.utils.removeDoubleQuotes
+import com.google.gson.Gson
 import com.google.gson.JsonDeserializationContext
 import com.google.gson.JsonDeserializer
 import com.google.gson.JsonElement
+import com.google.gson.reflect.TypeToken
 import java.lang.reflect.Type
+
+
 
 internal class CampaignResponseDeserializer : JsonDeserializer<CampaignResponse> {
     override fun deserialize(
         json: JsonElement, typeOfT: Type, context: JsonDeserializationContext
     ): CampaignResponse {
         val jsonObject = json.asJsonObject
+        val gson = Gson()
 
         val userId = jsonObject.get("user_id")?.takeIf { !it.isJsonNull }?.asString?.removeDoubleQuotes() ?: ""
         val campaignsJsonArray = jsonObject.getAsJsonArray("campaigns")?.takeIf { !it.isJsonNull }
@@ -20,13 +25,13 @@ internal class CampaignResponseDeserializer : JsonDeserializer<CampaignResponse>
             val campaignType = campaignObject.get("campaign_type")?.asString ?: ""
 
             val detailsJson = campaignObject.get("details")
-
-            val details: Details? = when (campaignType) {
+            val details: Any? = when (campaignType) {
                 "FLT" -> context.deserialize(detailsJson, FloaterDetails::class.java)
                 "CSAT" -> context.deserialize(detailsJson, CSATDetails::class.java)
                 "WID" -> context.deserialize(detailsJson, WidgetDetails::class.java)
                 "BAN" -> context.deserialize(detailsJson, BannerDetails::class.java)
                 "REL" -> context.deserialize(detailsJson, ReelsDetails::class.java)
+                "STR" -> context.deserialize(detailsJson, object : TypeToken<List<StoryGroup>>() {}.type)
                 else -> null
             }
 
