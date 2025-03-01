@@ -75,9 +75,7 @@ internal fun FullScreenVideoScreen(reels: List<Reel>, likedReels: List<String>, 
         }
     }
 
-    val isLikedState = remember {
-        reels.map { mutableStateOf(false) }
-    }
+
 
     val players = remember {
         reels.map { reel ->
@@ -124,8 +122,8 @@ internal fun FullScreenVideoScreen(reels: List<Reel>, likedReels: List<String>, 
                 AndroidView(
                     factory = {
                         PlayerView(it).apply {
-                            player = players[page]
                             useController = false // Hide controls
+                            player = players[page]
 
                         }
                     },
