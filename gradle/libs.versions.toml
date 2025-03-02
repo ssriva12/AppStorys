@@ -24,6 +24,8 @@ exoplayerCore = "2.19.1"
 navigationCompose = "2.8.8"
 activityComposeVersion = "1.10.1"
 foundation = "1.6.0"
+media3ExoplayerDash = "1.5.1"
+media3ExoplayerHls = "1.5.1"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -55,6 +57,8 @@ exoplayer-core = { group = "com.google.android.exoplayer", name = "exoplayer-cor
 androidx-navigation-compose = { group = "androidx.navigation", name = "navigation-compose", version.ref = "navigationCompose" }
 activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "activityComposeVersion" }
 androidx-foundation = { group = "androidx.compose.foundation", name = "foundation", version.ref = "foundation" }
+androidx-media3-exoplayer-dash = { group = "androidx.media3", name = "media3-exoplayer-dash", version.ref = "media3ExoplayerDash" }
+androidx-media3-exoplayer-hls = { group = "androidx.media3", name = "media3-exoplayer-hls", version.ref = "media3ExoplayerHls" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
