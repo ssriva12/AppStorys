@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.Button
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -39,7 +40,7 @@ fun MyApp() {
 
     campaignManager.getScreenCampaigns(
         "Home Screen",
-        listOf("banner_top", "banner_bottom", "widget_top", "widget_center", "widget_bottom")
+        listOf("widget_one", "widget_three", "widget_fifty", "widget_four")
     )
 
 
@@ -75,7 +76,16 @@ fun AllCampaigns(){
             }
 
             item{
-                campaignManager.Widget(placeHolder = context.getDrawable(R.drawable.ic_launcher_foreground), position = null)
+                campaignManager.Widget(placeHolder = context.getDrawable(R.drawable.ic_launcher_foreground), position = "widget_one")
+            }
+
+
+            item{
+                campaignManager.Widget(placeHolder = context.getDrawable(R.drawable.ic_launcher_foreground), position = "widget_three")
+            }
+
+            item{
+                campaignManager.Widget(placeHolder = context.getDrawable(R.drawable.ic_launcher_foreground), position = "widget_fifty")
             }
 
             item{
@@ -86,10 +96,17 @@ fun AllCampaigns(){
             item{
                 campaignManager.Stories()
             }
+
+            item{
+                campaignManager.Widget(placeHolder = context.getDrawable(R.drawable.ic_launcher_foreground), position = "widget_four")
+            }
+
+
         }
+        campaignManager.CSAT(modifier = Modifier.align(Alignment.BottomCenter))
 
         campaignManager.Floater(boxModifier = Modifier.align(Alignment.BottomCenter))
-        campaignManager.CSAT(modifier = Modifier.align(Alignment.BottomCenter))
+
     }
 
 }

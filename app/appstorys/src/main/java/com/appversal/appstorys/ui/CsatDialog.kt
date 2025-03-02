@@ -1,5 +1,6 @@
 package com.appversal.appstorys.ui
 
+import android.net.Uri
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -19,6 +20,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -164,7 +166,8 @@ internal fun CsatDialog(
                         localContent = localContent,
                         styling = styling,
                         onDone = onDismiss,
-                        image = csatDetails.thankyouImage
+                        image = csatDetails.thankyouImage,
+                        csatDetails = csatDetails
                     )
                 }
             }
@@ -330,8 +333,10 @@ private fun ThankYouContent(
     localContent: Map<String, String>,
     styling: Map<String, Color>,
     image: String,
+    csatDetails: CSATDetails,
     onDone: () -> Unit
 ) {
+    val context = LocalContext.current
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -365,7 +370,24 @@ private fun ThankYouContent(
         Spacer(modifier = Modifier.height(16.dp))
 
         Button(
-            onClick = onDone,
+            onClick = {
+                if(csatDetails.link.isNullOrEmpty()){
+                    onDone()
+                } else {
+                    try {
+                        val uri = Uri.parse(csatDetails.link)
+                        val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, uri)
+                        context.startActivity(intent)
+                    } catch (e: Exception) {
+                        // Show error toast or snackbar
+                        android.widget.Toast.makeText(
+                            context,
+                            "Could not open link",
+                            android.widget.Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                }
+            },
             colors = ButtonDefaults.buttonColors(
                 containerColor = styling["csatCtaBackgroundColor"]!!
             )

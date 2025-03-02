@@ -15,6 +15,7 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.pager.VerticalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.*
@@ -272,7 +273,7 @@ internal fun FullScreenVideoScreen(
                                 }
                             }
 
-                            Spacer(modifier = Modifier.fillMaxHeight(0.08f))
+                            Spacer(modifier = Modifier.fillMaxHeight(0.02f))
                         }
                     }
                 }
@@ -280,13 +281,18 @@ internal fun FullScreenVideoScreen(
         }
 
         // Back Button
-        Button(
+        IconButton(
             onClick = { onBack() },
             modifier = Modifier
                 .align(Alignment.TopStart)
-                .padding(16.dp)
+                .padding(12.dp)
         ) {
-            Text("Back")
+            Icon(
+                imageVector = androidx.compose.material.icons.Icons.Default.ArrowBack,
+                contentDescription = "Back",
+                tint = Color.White,
+                modifier = Modifier.size(28.dp)
+            )
         }
     }
 }

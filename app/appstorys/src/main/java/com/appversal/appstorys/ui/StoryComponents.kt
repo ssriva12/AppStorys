@@ -42,6 +42,7 @@ import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.ViewConfiguration
@@ -422,13 +423,15 @@ internal fun StoryScreen(
 
 
                 // Share button
-                IconButton(onClick = shareContent) {
-                    Icon(
-                        imageVector = Icons.Default.Share,
-                        contentDescription = "Share",
-                        tint = Color.White,
-                        modifier = Modifier.size(24.dp)
-                    )
+                if (currentSlide.link?.isNotEmpty() == true && currentSlide.buttonText?.isNotEmpty() == true){
+                    IconButton(onClick = shareContent) {
+                        Icon(
+                            imageVector = Icons.Default.Share,
+                            contentDescription = "Share",
+                            tint = Color.White,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
                 }
 
                 // Close button
@@ -481,9 +484,13 @@ internal fun StoryScreen(
                                   },
                         modifier = Modifier
                             .align(Alignment.BottomCenter)
-                            .padding(bottom = 32.dp)
+                            .padding(bottom = 32.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                containerColor = Color.White
+                                )
+
                     ) {
-                        Text(text = currentSlide.buttonText)
+                        Text(text = currentSlide.buttonText, color = Color.Black)
                     }
                 }
 

@@ -73,6 +73,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.appversal.appstorys.api.ReelActionRequest
@@ -83,6 +84,11 @@ import com.appversal.appstorys.ui.StoryAppMain
 import com.appversal.appstorys.ui.getLikedReels
 import com.appversal.appstorys.ui.saveLikedReels
 import com.appversal.appstorys.ui.saveViewedStories
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody
+import org.json.JSONObject
 
 class AppStorys private constructor(
     private val context: Application,
@@ -185,6 +191,40 @@ class AppStorys private constructor(
             }
         }catch (exception: Exception){
             Log.e("AppStorys", exception.message ?: "Error Fetch Data")
+        }
+    }
+
+    fun trackEvents(
+        event_type: String,
+        campaign_id: String? = null,
+        metadata: Map<String, Any>? = null
+    ) {
+        coroutineScope.launch {
+            if (accessToken.isNotEmpty()) {
+                try {
+                    val requestBody = JSONObject().apply {
+                        put("user_id", userId)
+                        put("event_type", event_type)
+                        campaign_id?.let { put("campaign_id", it) }
+                        metadata?.let { put("metadata", it) }
+                    }
+
+                    val client = OkHttpClient()
+                    val request = Request.Builder()
+                        .url("https://tracking.appstorys.com/capture-event") // Replace with your actual API endpoint
+                        .post(RequestBody.create("application/json".toMediaTypeOrNull(), requestBody.toString()))
+                        .addHeader("Authorization", "Bearer $accessToken")
+                        .build()
+
+                    val response = client.newCall(request).execute()
+
+//                    Log.i("eventTrack", response.code.toString())
+                } catch (e: Exception) {
+                    // Handle exception
+                    e.printStackTrace()
+//                    Log.i("eventTrack", e.toString())
+                }
+            }
         }
     }
 
@@ -607,7 +647,7 @@ class AppStorys private constructor(
     @Composable
     fun Widget(
         modifier: Modifier = Modifier,
-        contentScale: ContentScale = ContentScale.Crop,
+        contentScale: ContentScale = ContentScale.FillWidth,
         staticHeight: Dp = 200.dp,
         placeHolder: Drawable?,
         position: String?
@@ -660,6 +700,12 @@ class AppStorys private constructor(
 
         val widgetDetails = (campaign?.details as? WidgetDetails)
 
+        // Track if the widget is visible in the viewport
+        var isVisible by remember { mutableStateOf(false) }
+
+//        Log.i("WidgetDetails", campaignsData.value.filter{
+//            it.campaignType == "WID" && it.details is WidgetDetails
+//        }.toString())
 
         if (widgetDetails?.widgetImages != null && widgetDetails.widgetImages.isNotEmpty() && campaign.id != null && !disabledCampaigns.value.contains(
                 campaign.id
@@ -670,16 +716,30 @@ class AppStorys private constructor(
             })
             val heightInDp: Dp? = widgetDetails.height?.dp
 
-            LaunchedEffect(pagerState.currentPage) {
-                trackCampaignActions(
-                    campaign.id,
-                    "IMP",
-                    widgetDetails.widgetImages[pagerState.currentPage].id
-                )
+            LaunchedEffect(pagerState.currentPage,  isVisible) {
+                if (isVisible) {
+                    campaign?.id?.let {
+                        trackCampaignActions(
+                            it,
+                            "IMP",
+                            widgetDetails.widgetImages[pagerState.currentPage].id
+                        )
+                    }
+                }
             }
 
             AutoSlidingCarousel(
-                modifier = modifier,
+                modifier = modifier.onGloballyPositioned { layoutCoordinates ->
+                    val visibilityRect = layoutCoordinates.boundsInWindow()
+                    // Consider widget visible if at least 50% of it is in the viewport
+                    val parentHeight = layoutCoordinates.parentLayoutCoordinates?.size?.height ?: 0
+                    val widgetHeight = layoutCoordinates.size.height
+                    val isAtLeastHalfVisible = visibilityRect.top < parentHeight &&
+                            visibilityRect.bottom > 0 &&
+                            (visibilityRect.height >= widgetHeight * 0.5f)
+
+                    isVisible = isAtLeastHalfVisible
+                },
                 pagerState = pagerState,
                 itemsCount = widgetDetails.widgetImages.count(),
                 itemContent = { index ->
@@ -719,6 +779,8 @@ class AppStorys private constructor(
 
         val widgetDetails = (campaign?.details as? WidgetDetails)
 
+        // Track if the widget is visible in the viewport
+        var isVisible by remember { mutableStateOf(false) }
 
         if (widgetDetails != null && campaign.id != null &&
             !disabledCampaigns.value.contains(campaign.id) && widgetDetails.widgetImages != null && widgetDetails.type == "half") {
@@ -729,22 +791,39 @@ class AppStorys private constructor(
                 widgetImagesPairs.count()
             })
 
-            LaunchedEffect(pagerState.currentPage) {
-                trackCampaignActions(
-                    campaign.id,
-                    "IMP",
-                    widgetImagesPairs[pagerState.currentPage].first.id
-                )
+            // Only trigger impression tracking when both visible and page changes
+            LaunchedEffect(pagerState.currentPage, isVisible) {
+                if (isVisible) {
+                    campaign?.id?.let {
+                        // Track impression for left image
+                        trackCampaignActions(
+                            it,
+                            "IMP",
+                            widgetImagesPairs[pagerState.currentPage].first.id
+                        )
 
-                trackCampaignActions(
-                    campaign.id,
-                    "IMP",
-                    widgetImagesPairs[pagerState.currentPage].second.id
-                )
+                        // Track impression for right image
+                        trackCampaignActions(
+                            it,
+                            "IMP",
+                            widgetImagesPairs[pagerState.currentPage].second.id
+                        )
+                    }
+                }
             }
 
             DoubleWidgets(
-                modifier = modifier,
+                modifier = modifier.onGloballyPositioned { layoutCoordinates ->
+                    val visibilityRect = layoutCoordinates.boundsInWindow()
+                    // Consider widget visible if at least 50% of it is in the viewport
+                    val parentHeight = layoutCoordinates.parentLayoutCoordinates?.size?.height ?: 0
+                    val widgetHeight = layoutCoordinates.size.height
+                    val isAtLeastHalfVisible = visibilityRect.top < parentHeight &&
+                            visibilityRect.bottom > 0 &&
+                            (visibilityRect.height >= widgetHeight * 0.5f)
+
+                    isVisible = isAtLeastHalfVisible
+                },
                 pagerState = pagerState,
                 itemsCount = widgetImagesPairs.count(),
                 itemContent = { index ->
@@ -799,14 +878,20 @@ class AppStorys private constructor(
         }
     }
 
-    private fun clickEvent(url: String, campaignId: String, widgetImageId: String? = null) {
-        if (!isValidUrl(url)) {
-            navigateToScreen(url)
-        } else {
-            openUrl(url)
-        }
+    private fun clickEvent(url: String?, campaignId: String, widgetImageId: String? = null) {
 
-        trackCampaignActions(campaignId, "CLK", widgetImageId)
+
+        if(url.isNullOrEmpty()){
+            null
+        } else {
+            if (!isValidUrl(url)) {
+                navigateToScreen(url)
+            } else {
+                openUrl(url)
+            }
+
+            trackCampaignActions(campaignId, "CLK", widgetImageId)
+        }
     }
 
 
