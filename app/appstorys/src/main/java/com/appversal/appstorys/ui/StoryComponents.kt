@@ -65,10 +65,8 @@ import kotlin.coroutines.cancellation.CancellationException
 
 @Composable
 internal fun StoryCircles(storyGroups: List<StoryGroup>, onStoryClick: (StoryGroup) -> Unit, viewedStories: List<String>) {
+
     // Sort story groups by order
-//    val sortedStoryGroups = remember(storyGroups) {
-//        storyGroups.sortedBy { it.order }
-//    }
     val sortedStoryGroups = remember(storyGroups, viewedStories) {
         storyGroups.sortedWith(
             compareByDescending<StoryGroup> { it.id !in viewedStories }
@@ -84,14 +82,16 @@ internal fun StoryCircles(storyGroups: List<StoryGroup>, onStoryClick: (StoryGro
     ) {
         items(sortedStoryGroups.size) { index ->
             val storyGroup = sortedStoryGroups[index]
-            StoryItem(
-                isStoryGroupViewed = viewedStories.contains(storyGroup.id),
-                imageUrl = storyGroup.thumbnail,
-                username = storyGroup.name,
-                ringColor = Color(android.graphics.Color.parseColor(storyGroup.ringColor)),
-                nameColor = Color(android.graphics.Color.parseColor(storyGroup.nameColor)),
-                onClick = { onStoryClick(storyGroup) }
-            )
+            if (storyGroup.thumbnail != null){
+                StoryItem(
+                    isStoryGroupViewed = viewedStories.contains(storyGroup.id),
+                    imageUrl = storyGroup.thumbnail,
+                    username = storyGroup.name ?: "",
+                    ringColor = Color(android.graphics.Color.parseColor(storyGroup.ringColor)),
+                    nameColor = Color(android.graphics.Color.parseColor(storyGroup.nameColor)),
+                    onClick = { onStoryClick(storyGroup) }
+                )
+            }
         }
     }
 }
@@ -144,11 +144,13 @@ internal fun StoryItem(
 internal fun StoryScreen(
     storyGroup: StoryGroup,
     onDismiss: () -> Unit,
+    slides: List<StorySlide>,
     onStoryGroupEnd: () -> Unit,
     sendEvent: (Pair<StorySlide, String>) -> Unit
 ) {
-    var currentSlideIndex by remember { mutableStateOf(0) }
-    val currentSlide = storyGroup.slides[currentSlideIndex]
+
+    var currentSlideIndex by remember { mutableIntStateOf(0) }
+    val currentSlide = slides.get(currentSlideIndex)
     val uriHandler = LocalUriHandler.current
     val context = LocalContext.current
     var isHolding by remember { mutableStateOf(false) }
@@ -184,7 +186,7 @@ internal fun StoryScreen(
         // Small delay before moving to the next slide
         CoroutineScope(Dispatchers.Main).launch {
             delay(100)
-            if (currentSlideIndex < storyGroup.slides.lastIndex) {
+            if (currentSlideIndex < slides.lastIndex) {
                 currentSlideIndex++
             } else {
                 onStoryGroupEnd()
@@ -313,7 +315,7 @@ internal fun StoryScreen(
                                     }
                                 } else {
                                     // Right side tap - go to next slide
-                                    if (currentSlideIndex < storyGroup.slides.lastIndex) {
+                                    if (currentSlideIndex < slides.lastIndex) {
                                         // Mark current slide as completed when manually skipping
                                         if (!completedSlides.contains(currentSlideIndex)) {
                                             completedSlides.add(currentSlideIndex)
@@ -342,7 +344,7 @@ internal fun StoryScreen(
                     .padding(horizontal = 8.dp),
                 horizontalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                storyGroup.slides.forEachIndexed { index, _ ->
+                slides.forEachIndexed { index, _ ->
                     val progressValue = when {
                         index == currentSlideIndex -> animatedProgress
                         index < currentSlideIndex || completedSlides.contains(index) -> 1f
@@ -383,11 +385,13 @@ internal fun StoryScreen(
                 Spacer(modifier = Modifier.width(8.dp))
 
                 // Username/Story group name
-                Text(
-                    text = storyGroup.name,
-                    color = Color.White,
-                    fontSize = 14.sp
-                )
+                storyGroup.name?.let {
+                    Text(
+                        text = it,
+                        color = Color.White,
+                        fontSize = 14.sp
+                    )
+                }
             }
 
             // Top controls row
@@ -469,7 +473,7 @@ internal fun StoryScreen(
                 }
 
                 // Link button if available
-                if (currentSlide.link.isNotEmpty() && currentSlide.buttonText.isNotEmpty()) {
+                if (currentSlide.link?.isNotEmpty() == true && currentSlide.buttonText?.isNotEmpty() == true) {
                     Button(
                         onClick = {
                             uriHandler.openUri(currentSlide.link)
@@ -515,31 +519,33 @@ internal fun StoriesApp(storyGroups: List<StoryGroup>, sendEvent: (Pair<StorySli
             storyGroups = storyGroups,
             onStoryClick = { storyGroup ->
                 selectedStoryGroup = storyGroup
-                selectedStoryGroup?.let{
-                    storyViewed(selectedStoryGroup!!.id)
+                selectedStoryGroup?.id?.let{
+                    storyViewed(it)
                 }
             }
         )
 
         selectedStoryGroup?.let { storyGroup ->
-            key(storyGroup) { // Ensures a fresh instance of StoryScreen
-                StoryScreen(
-                    storyGroup = storyGroup,
-                    onDismiss = { selectedStoryGroup = null },
-                    onStoryGroupEnd = {
-                        val currentIndex = storyGroups.indexOf(storyGroup)
-                        if (currentIndex < storyGroups.lastIndex) {
-                            selectedStoryGroup = null // Reset first
-                            selectedStoryGroup = storyGroups[currentIndex + 1]
-                            selectedStoryGroup?.let{
-                                storyViewed(selectedStoryGroup!!.id)
+            if (!storyGroup.slides.isNullOrEmpty()){
+                key(storyGroup) {
+                    StoryScreen(
+                        storyGroup = storyGroup,
+                        slides = storyGroup.slides,
+                        onDismiss = { selectedStoryGroup = null },
+                        onStoryGroupEnd = {
+                            val currentIndex = storyGroups.indexOf(storyGroup)
+                            if (currentIndex < storyGroups.lastIndex) {
+                                selectedStoryGroup = storyGroups[currentIndex + 1]
+                                selectedStoryGroup?.id?.let{
+                                    storyViewed(it)
+                                }
+                            } else {
+                                selectedStoryGroup = null
                             }
-                        } else {
-                            selectedStoryGroup = null
-                        }
-                    },
-                    sendEvent = sendEvent
-                )
+                        },
+                        sendEvent = sendEvent
+                    )
+                }
             }
         }
     }

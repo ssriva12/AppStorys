@@ -135,38 +135,17 @@ class AppStorys private constructor(
         if (isDataFetched) return
         isDataFetched = true
 
-        val accessToken = repository.getAccessToken(appId, accountId)
-        Log.d("accessToken", accessToken.toString())
+        try {
+            val accessToken = repository.getAccessToken(appId, accountId)
+            Log.d("accessToken", accessToken.toString())
 
-        if (accessToken != null) {
-            this.accessToken = accessToken
-            currentScreen = "Home Screen"
-            val campaignList = repository.getCampaigns(accessToken, currentScreen, null)
-            Log.d("campaignList", campaignList.toString())
-
-            if (campaignList.isNotEmpty()) {
-                val campaignsData = repository.getCampaignData(accessToken, userId, campaignList, attributes)
-                Log.d("campaignsData", campaignsData.toString())
-
-                campaignsData?.campaigns?.let { _campaigns.emit(it) }
-                Log.d("CampaignsValue", _campaigns.toString())
-            }
-
-        }
-    }
-
-    fun getScreenCampaigns(screenName: String, positionList: List<String>) {
-        coroutineScope.launch {
-            if (accessToken.isNotEmpty()) {
-                if (currentScreen != screenName) {
-                    _disabledCampaigns.emit(emptyList())
-                    _impressions.emit(emptyList())
-                    currentScreen = screenName
-                }
-                val campaignList = repository.getCampaigns(accessToken, currentScreen, positionList)
+            if (accessToken != null) {
+                this.accessToken = accessToken
+                currentScreen = "Home Screen"
+                val campaignList = repository.getCampaigns(accessToken, currentScreen, null)
                 Log.d("campaignList", campaignList.toString())
 
-                if (campaignList.isNotEmpty()) {
+                if (campaignList?.isNotEmpty() == true) {
                     val campaignsData =
                         repository.getCampaignData(accessToken, userId, campaignList, attributes)
                     Log.d("campaignsData", campaignsData.toString())
@@ -174,7 +153,38 @@ class AppStorys private constructor(
                     campaignsData?.campaigns?.let { _campaigns.emit(it) }
                     Log.d("CampaignsValue", _campaigns.toString())
                 }
+
             }
+        }catch (exception: Exception){
+            Log.e("AppStorys", exception.message ?: "Error Fetch Data")
+        }
+
+    }
+
+    fun getScreenCampaigns(screenName: String, positionList: List<String>) {
+        try {
+            coroutineScope.launch {
+                if (accessToken.isNotEmpty()) {
+                    if (currentScreen != screenName) {
+                        _disabledCampaigns.emit(emptyList())
+                        _impressions.emit(emptyList())
+                        currentScreen = screenName
+                    }
+                    val campaignList = repository.getCampaigns(accessToken, currentScreen, positionList)
+                    Log.d("campaignList", campaignList.toString())
+
+                    if (campaignList?.isNotEmpty() == true) {
+                        val campaignsData =
+                            repository.getCampaignData(accessToken, userId, campaignList, attributes)
+                        Log.d("campaignsData", campaignsData.toString())
+
+                        campaignsData?.campaigns?.let { _campaigns.emit(it) }
+                        Log.d("CampaignsValue", _campaigns.toString())
+                    }
+                }
+            }
+        }catch (exception: Exception){
+            Log.e("AppStorys", exception.message ?: "Error Fetch Data")
         }
     }
 
@@ -184,6 +194,7 @@ class AppStorys private constructor(
         displayDelaySeconds: Long = 10,
         position: String? = null
     ) {
+
         if (!showCsat) {
             val campaignsData = campaigns.collectAsStateWithLifecycle()
 
@@ -263,7 +274,7 @@ class AppStorys private constructor(
             else -> null
         }
 
-        if (floaterDetails != null) {
+        if (floaterDetails != null && !floaterDetails.image.isNullOrEmpty()) {
             LaunchedEffect(Unit) {
                 campaign?.id?.let {
                     trackCampaignActions(it, "IMP")
@@ -282,9 +293,10 @@ class AppStorys private constructor(
                 OverlayFloater(
                     modifier = iconModifier.then(alignmentModifier),
                     onClick = {
-                        campaign?.id?.let {
-                            clickEvent(url = floaterDetails.link, campaignId = it)
+                        if (campaign?.id != null && floaterDetails.link != null) {
+                            clickEvent(url = floaterDetails.link, campaignId = campaign.id)
                         }
+
                     },
                     image = floaterDetails.image,
                     height = floaterDetails.height?.dp ?: 60.dp,
@@ -339,20 +351,22 @@ class AppStorys private constructor(
     }
 
     @Composable
-    fun Stories(){
+    fun Stories() {
         val campaignsData = campaigns.collectAsStateWithLifecycle()
         val campaign = campaignsData.value.firstOrNull { it.campaignType == "STR" }
         val storiesDetails = (campaign?.details as? List<*>)?.filterIsInstance<StoryGroup>()
 
-        if (!storiesDetails.isNullOrEmpty()){
-            StoryAppMain(apiStoryGroups = storiesDetails, sendEvent =  {
+        if (!storiesDetails.isNullOrEmpty()) {
+            StoryAppMain(apiStoryGroups = storiesDetails, sendEvent = {
                 coroutineScope.launch {
-                    repository.trackStoriesActions(accessToken, TrackActionStories(
-                        campaign_id = campaign.id,
-                        user_id = userId,
-                        story_slide = it.first.id,
-                        event_type = it.second
-                    ))
+                    repository.trackStoriesActions(
+                        accessToken, TrackActionStories(
+                            campaign_id = campaign.id,
+                            user_id = userId,
+                            story_slide = it.first.id,
+                            event_type = it.second
+                        )
+                    )
                 }
             }
             )
@@ -364,12 +378,13 @@ class AppStorys private constructor(
     @Composable
     fun Reels(modifier: Modifier = Modifier) {
         val campaignsData = campaigns.collectAsStateWithLifecycle()
-        val campaign = campaignsData.value.firstOrNull { it.campaignType == "REL" && it.details is ReelsDetails }
+        val campaign =
+            campaignsData.value.firstOrNull { it.campaignType == "REL" && it.details is ReelsDetails }
         val reelsDetails = campaign?.details as? ReelsDetails
         val selectedReelIndex by selectedReelIndex.collectAsStateWithLifecycle()
         val visibility by reelFullScreenVisible.collectAsStateWithLifecycle()
 
-        if (reelsDetails != null){
+        if (reelsDetails?.reels != null && reelsDetails.reels.isNotEmpty()) {
             Box(modifier = Modifier.fillMaxSize()) {
 
                 ReelsRow(
@@ -383,11 +398,12 @@ class AppStorys private constructor(
                     }
                 )
 
-                if (visibility){
+                if (visibility) {
                     ReelFullScreen(
                         campaignId = campaign.id,
                         reelsDetails = reelsDetails,
-                        selectedReelIndex = selectedReelIndex){
+                        selectedReelIndex = selectedReelIndex
+                    ) {
                         coroutineScope.launch {
                             _selectedReelIndex.emit(0)
                             _reelFullScreenVisible.emit(false)
@@ -400,47 +416,71 @@ class AppStorys private constructor(
     }
 
     @Composable
-    private fun ReelFullScreen(campaignId: String, reelsDetails: ReelsDetails, selectedReelIndex: Int, onDismiss : () -> Unit){
+    private fun ReelFullScreen(
+        campaignId: String?,
+        reelsDetails: ReelsDetails,
+        selectedReelIndex: Int,
+        onDismiss: () -> Unit
+    ) {
+        if (!reelsDetails.reels.isNullOrEmpty()) {
 
-        var likedReels by remember { mutableStateOf(getLikedReels(context.getSharedPreferences("AppStory", Context.MODE_PRIVATE))) }
-
-        Dialog(
-            onDismissRequest = onDismiss,
-            properties = DialogProperties(
-                dismissOnBackPress = true,
-                dismissOnClickOutside = false,
-                usePlatformDefaultWidth = false
-            )
-        ) {
-
-            BackHandler {
-                coroutineScope.launch {
-                    _selectedReelIndex.emit(0)
-                    _reelFullScreenVisible.emit(false)
-                }
+            var likedReels by remember {
+                mutableStateOf(
+                    getLikedReels(
+                        context.getSharedPreferences(
+                            "AppStory",
+                            Context.MODE_PRIVATE
+                        )
+                    )
+                )
             }
 
-            FullScreenVideoScreen(
-                reels = reelsDetails.reels,
-                likedReels = likedReels,
-                startIndex = selectedReelIndex,
-                sendLikesStatus = {
-                    if (!_impressions.value.contains(it.first.id)){
-                        coroutineScope.launch {
-                            val impressions = ArrayList(impressions.value)
-                            impressions.add(it.first.id)
-                            _impressions.emit(impressions)
+            Dialog(
+                onDismissRequest = onDismiss,
+                properties = DialogProperties(
+                    dismissOnBackPress = true,
+                    dismissOnClickOutside = false,
+                    usePlatformDefaultWidth = false
+                )
+            ) {
 
-                            if (it.second == "like"){
+                BackHandler {
+                    coroutineScope.launch {
+                        _selectedReelIndex.emit(0)
+                        _reelFullScreenVisible.emit(false)
+                    }
+                }
+
+                FullScreenVideoScreen(
+                    reels = reelsDetails.reels,
+                    likedReels = likedReels,
+                    startIndex = selectedReelIndex,
+                    sendLikesStatus = {
+                        coroutineScope.launch {
+
+
+                            if (it.second == "like") {
                                 val list = ArrayList(likedReels)
                                 list.add(it.first.id)
-                                likedReels = list
-                                saveLikedReels(idList = list, sharedPreferences = context.getSharedPreferences("AppStory", Context.MODE_PRIVATE))
-                            }else{
+                                likedReels = list.distinct()
+                                saveLikedReels(
+                                    idList = list.distinct(),
+                                    sharedPreferences = context.getSharedPreferences(
+                                        "AppStory",
+                                        Context.MODE_PRIVATE
+                                    )
+                                )
+                            } else {
                                 val list = ArrayList(likedReels)
                                 list.remove(it.first.id)
-                                likedReels = list
-                                saveLikedReels(idList = list, sharedPreferences = context.getSharedPreferences("AppStory", Context.MODE_PRIVATE))
+                                likedReels = list.distinct()
+                                saveLikedReels(
+                                    idList = list.distinct(),
+                                    sharedPreferences = context.getSharedPreferences(
+                                        "AppStory",
+                                        Context.MODE_PRIVATE
+                                    )
+                                )
                             }
 
                             repository.sendReelLikeStatus(
@@ -452,28 +492,48 @@ class AppStorys private constructor(
                                 )
                             )
                         }
+                    },
+                    sendEvents = {
+                        if (it.second == "IMP") {
+                            if (!_impressions.value.contains(it.first.id)) {
+                                coroutineScope.launch {
+                                    val impressions = ArrayList(impressions.value)
+                                    impressions.add(it.first.id)
+                                    _impressions.emit(impressions)
+                                    repository.trackReelActions(
+                                        accessToken = accessToken,
+                                        actions = ReelActionRequest(
+                                            user_id = userId,
+                                            reel_id = it.first.id,
+                                            event_type = it.second,
+                                            campaign_id = campaignId
+                                        )
+                                    )
+                                }
+                            }
+                        } else {
+                            coroutineScope.launch {
+                                repository.trackReelActions(
+                                    accessToken = accessToken,
+                                    actions = ReelActionRequest(
+                                        user_id = userId,
+                                        reel_id = it.first.id,
+                                        event_type = it.second,
+                                        campaign_id = campaignId
+                                    )
+                                )
+                            }
+                        }
+
+                    },
+                    onBack = {
+                        coroutineScope.launch {
+                            _selectedReelIndex.emit(0)
+                            _reelFullScreenVisible.emit(false)
+                        }
                     }
-                },
-                sendEvents = {
-                    coroutineScope.launch {
-                        repository.trackReelActions(
-                            accessToken = accessToken,
-                            actions = ReelActionRequest(
-                                user_id = userId,
-                                reel_id = it.first.id,
-                                event_type = it.second,
-                                campaign_id = campaignId
-                            )
-                        )
-                    }
-                },
-                onBack = {
-                    coroutineScope.launch {
-                        _selectedReelIndex.emit(0)
-                        _reelFullScreenVisible.emit(false)
-                    }
-                }
-            )
+                )
+            }
         }
     }
 
@@ -513,7 +573,7 @@ class AppStorys private constructor(
             com.appversal.appstorys.ui.PinnedBanner(
                 modifier = modifier.clickable {
                     campaign?.id?.let {
-                        clickEvent(url = bannerDetails.link, campaignId = it)
+                        clickEvent(url = bannerDetails.link ?: "", campaignId = it)
                     }
                 },
                 imageUrl = bannerUrl ?: "",
@@ -553,8 +613,9 @@ class AppStorys private constructor(
         position: String?
     ) {
         val campaignsData = campaigns.collectAsStateWithLifecycle()
-        val campaign = campaignsData.value.filter { it.campaignType == "WID" && it.details is WidgetDetails }
-            .firstOrNull { it.position == position }
+        val campaign =
+            campaignsData.value.filter { it.campaignType == "WID" && it.details is WidgetDetails }
+                .firstOrNull { it.position == position }
         val widgetDetails = campaign?.details as? WidgetDetails
         Log.i("widgetDetails", campaign.toString())
 
@@ -599,23 +660,22 @@ class AppStorys private constructor(
 
         val widgetDetails = (campaign?.details as? WidgetDetails)
 
-        Log.i("WidgetDetails", campaignsData.value.filter {
-            it.campaignType == "WID" && it.details is WidgetDetails
-        }.toString())
-        if (widgetDetails != null && !disabledCampaigns.value.contains(campaign?.id) && widgetDetails.type == "full") {
+
+        if (widgetDetails?.widgetImages != null && widgetDetails.widgetImages.isNotEmpty() && campaign.id != null && !disabledCampaigns.value.contains(
+                campaign.id
+            ) && widgetDetails.type == "full"
+        ) {
             val pagerState = rememberPagerState(pageCount = {
                 widgetDetails.widgetImages.count()
             })
             val heightInDp: Dp? = widgetDetails.height?.dp
 
             LaunchedEffect(pagerState.currentPage) {
-                campaign?.id?.let {
-                    trackCampaignActions(
-                        it,
-                        "IMP",
-                        widgetDetails.widgetImages[pagerState.currentPage].id
-                    )
-                }
+                trackCampaignActions(
+                    campaign.id,
+                    "IMP",
+                    widgetDetails.widgetImages[pagerState.currentPage].id
+                )
             }
 
             AutoSlidingCarousel(
@@ -623,26 +683,24 @@ class AppStorys private constructor(
                 pagerState = pagerState,
                 itemsCount = widgetDetails.widgetImages.count(),
                 itemContent = { index ->
-                    CarousalImage(
-                        modifier = Modifier.clickable {
-                            campaign?.id?.let {
+                    widgetDetails.widgetImages[index].link?.let {
+                        CarousalImage(
+                            modifier = Modifier.clickable {
                                 clickEvent(
-                                    url = widgetDetails.widgetImages[index].link,
-                                    campaignId = it,
+                                    url = it,
+                                    campaignId = campaign.id,
                                     widgetImageId = widgetDetails.widgetImages[index].id
                                 )
-                            }
-                        },
-                        contentScale = contentScale,
-                        imageUrl = widgetDetails.widgetImages[index].image,
-                        placeHolder = placeHolder,
-                        height = heightInDp ?: staticHeight,
-                    )
+                            },
+                            contentScale = contentScale,
+                            imageUrl = it,
+                            placeHolder = placeHolder,
+                            height = heightInDp ?: staticHeight,
+                        )
+                    }
                 }
             )
-
         }
-
     }
 
     @Composable
@@ -662,7 +720,8 @@ class AppStorys private constructor(
         val widgetDetails = (campaign?.details as? WidgetDetails)
 
 
-        if (widgetDetails != null && !disabledCampaigns.value.contains(campaign?.id) && widgetDetails.type == "half") {
+        if (widgetDetails != null && campaign.id != null &&
+            !disabledCampaigns.value.contains(campaign.id) && widgetDetails.widgetImages != null && widgetDetails.type == "half") {
 
             val heightInDp: Dp? = widgetDetails.height?.dp
             val widgetImagesPairs = widgetDetails.widgetImages.turnToPair()
@@ -671,23 +730,17 @@ class AppStorys private constructor(
             })
 
             LaunchedEffect(pagerState.currentPage) {
-                campaign?.id?.let {
-                    trackCampaignActions(
-                        it,
-                        "IMP",
-                        widgetImagesPairs[pagerState.currentPage].first.id
-                    )
-                }
+                trackCampaignActions(
+                    campaign.id,
+                    "IMP",
+                    widgetImagesPairs[pagerState.currentPage].first.id
+                )
 
-                campaign?.id?.let {
-
-                    trackCampaignActions(
-                        it,
-                        "IMP",
-                        widgetImagesPairs[pagerState.currentPage].second.id
-                    )
-                }
-
+                trackCampaignActions(
+                    campaign.id,
+                    "IMP",
+                    widgetImagesPairs[pagerState.currentPage].second.id
+                )
             }
 
             DoubleWidgets(
@@ -702,37 +755,44 @@ class AppStorys private constructor(
                             .padding(horizontal = 16.dp),
                         horizontalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
-                        ImageCard(
-                            modifier = Modifier
-                                .weight(1f)
-                                .clickable {
-                                    campaign?.id?.let {
-                                        clickEvent(
-                                            url = leftImage.link,
-                                            campaignId = it,
-                                            widgetImageId = leftImage.id
-                                        )
-                                    }
-                                },
-                            imageUrl = leftImage.image,
-                            height = heightInDp ?: staticHeight
-                        )
+                        if (leftImage.image != null) {
+                            ImageCard(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clickable {
+                                        if (leftImage.link != null) {
+                                            clickEvent(
+                                                url = leftImage.link,
+                                                campaignId = campaign.id,
+                                                widgetImageId = leftImage.id
+                                            )
+                                        }
 
-                        ImageCard(
-                            modifier = Modifier
-                                .weight(1f)
-                                .clickable {
-                                    campaign?.id?.let {
-                                        clickEvent(
-                                            url = rightImage.link,
-                                            campaignId = it,
-                                            widgetImageId = rightImage.id
-                                        )
-                                    }
-                                },
-                            imageUrl = rightImage.image,
-                            height = heightInDp ?: staticHeight
-                        )
+                                    },
+                                imageUrl = leftImage.image,
+                                height = heightInDp ?: staticHeight
+                            )
+
+                        }
+
+                        if (rightImage.image != null) {
+                            ImageCard(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clickable {
+                                        if (rightImage.link != null) {
+                                            clickEvent(
+                                                url = rightImage.link,
+                                                campaignId = campaign.id,
+                                                widgetImageId = rightImage.id
+                                            )
+                                        }
+                                    },
+                                imageUrl = rightImage.image,
+                                height = heightInDp ?: staticHeight
+                            )
+                        }
+
                     }
                 }
             )
@@ -750,8 +810,10 @@ class AppStorys private constructor(
     }
 
 
-
     private fun List<WidgetImage>.turnToPair(): List<Pair<WidgetImage, WidgetImage>> {
+        if (this.isEmpty()){
+            return emptyList()
+        }
         // Sort by order and pair consecutive elements
         val widgetImagePairs: List<Pair<WidgetImage, WidgetImage>> = this
             .sortedBy { it.order }
@@ -805,7 +867,7 @@ class AppStorys private constructor(
             val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
             intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
             context.startActivity(intent)
-        }catch (_: Exception){
+        } catch (_: Exception) {
 
         }
 

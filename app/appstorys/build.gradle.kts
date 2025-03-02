@@ -62,11 +62,12 @@ dependencies {
     implementation(libs.androidx.media3.exoplayer)
     implementation(libs.androidx.media3.ui)
     implementation(libs.exoplayer.ui)
-    implementation(libs.exoplayer.ui)
     implementation(libs.exoplayer.core)
     implementation(libs.androidx.navigation.compose)
     implementation(libs.activity.compose)
     implementation(libs.androidx.foundation)
+    implementation(libs.androidx.media3.exoplayer.dash)
+    implementation(libs.androidx.media3.exoplayer.hls)
 
 }
 

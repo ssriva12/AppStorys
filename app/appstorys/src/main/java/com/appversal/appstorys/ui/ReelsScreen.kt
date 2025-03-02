@@ -1,13 +1,22 @@
 package com.appversal.appstorys.ui
 
+import android.annotation.SuppressLint
+import android.content.Context
 import android.content.SharedPreferences
 import android.net.Uri
-import android.util.Log
+import android.view.ViewGroup
+import android.widget.FrameLayout
+import androidx.annotation.OptIn
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.pager.VerticalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -19,116 +28,97 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
-import coil.compose.rememberAsyncImagePainter
+import androidx.core.net.toUri
 import androidx.media3.common.MediaItem
-import androidx.media3.common.Player
+import androidx.media3.common.util.UnstableApi
+import androidx.media3.database.StandaloneDatabaseProvider
+import androidx.media3.datasource.DefaultDataSource
+import androidx.media3.datasource.cache.CacheDataSource
+import androidx.media3.datasource.cache.LeastRecentlyUsedCacheEvictor
+import androidx.media3.datasource.cache.SimpleCache
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
-import androidx.compose.foundation.background
-import androidx.compose.foundation.pager.VerticalPager
-import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.Share
+import coil.compose.rememberAsyncImagePainter
 import com.appversal.appstorys.api.Reel
 import org.json.JSONArray
+import java.io.File
 
 
 @Composable
-internal fun ReelsRow(modifier : Modifier, reels: List<Reel>, onReelClick: (Int) -> Unit) {
+internal fun ReelsRow(modifier: Modifier, reels: List<Reel>, onReelClick: (Int) -> Unit) {
 
-        LazyRow(
-            modifier = modifier
-                .fillMaxWidth()
-                .padding(16.dp)
-        ) {
-            items(reels.size) { index ->
-                Box(
-                    modifier = Modifier
-                        .width(120.dp)
-                        .height(180.dp)
-                        .padding(end = 10.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .clickable { onReelClick(index) }
-                ) {
-                    Image(
-                        painter = rememberAsyncImagePainter(reels[index].thumbnail),
-                        contentDescription = "Thumbnail",
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier.fillMaxSize()
-                    )
-                }
+    LazyRow(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(16.dp)
+    ) {
+        items(reels.size) { index ->
+            Box(
+                modifier = Modifier
+                    .width(120.dp)
+                    .height(180.dp)
+                    .padding(end = 10.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .clickable { onReelClick(index) }
+            ) {
+                Image(
+                    painter = rememberAsyncImagePainter(reels[index].thumbnail),
+                    contentDescription = "Thumbnail",
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize()
+                )
             }
         }
+    }
 
 }
 
 @Composable
-internal fun FullScreenVideoScreen(reels: List<Reel>, likedReels: List<String>, startIndex: Int, onBack: () -> Unit, sendLikesStatus: (Pair<Reel, String>) -> Unit, sendEvents: (Pair<Reel, String>) -> Unit) {
-    val screenHeight = getScreenHeight().dp
+internal fun FullScreenVideoScreen(
+    reels: List<Reel>,
+    likedReels: List<String>,
+    startIndex: Int,
+    onBack: () -> Unit,
+    sendLikesStatus: (Pair<Reel, String>) -> Unit,
+    sendEvents: (Pair<Reel, String>) -> Unit
+) {
     val pagerState = rememberPagerState(initialPage = startIndex, pageCount = { reels.size })
     val context = LocalContext.current
 
     // Track likes state for each reel
     val likesState = remember {
         reels.map { reel ->
-            mutableStateOf(reel.likes)
+            mutableIntStateOf(reel.likes ?: 0)
         }
     }
 
-
-
-    val players = remember {
-        reels.map { reel ->
-
-            ExoPlayer.Builder(context).build().apply {
-                setMediaItem(MediaItem.fromUri(Uri.parse(reel.video)))
-                repeatMode = Player.REPEAT_MODE_ONE
-                prepare()
-            }
-        }
-    }
-
-    // Handle play/pause when the page changes
-    LaunchedEffect(pagerState.currentPage) {
-        players.forEach { it.playWhenReady = false }
-        players[pagerState.currentPage].playWhenReady = true
-        sendEvents(Pair(reels[pagerState.currentPage], "IMP"))
-    }
-
-    // Clean up players when leaving the screen
-    DisposableEffect(Unit) {
-        onDispose {
-            players.forEach { it.release() }
-        }
-    }
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black)
     ) {
         VerticalPager(
             state = pagerState,
             modifier = Modifier
-                .fillMaxWidth()
-                .height(screenHeight)
+                .fillMaxSize(),
+            beyondViewportPageCount = 20
         ) { page ->
+
             Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .background(Color.Black)
             ) {
-                // Video Player
-                AndroidView(
-                    factory = {
-                        PlayerView(it).apply {
-                            useController = false // Hide controls
-                            player = players[page]
 
-                        }
-                    },
-                    modifier = Modifier.fillMaxSize(),
-                )
+                if (pagerState.currentPage == page) {
+                    reels[page].video?.let {
+                        VideoPlayer(
+                            url = it,
+                            isPlaying = pagerState.currentPage == page
+                        )
+                    }
+                }
+
 
                 // UI Controls overlay
                 Column(
@@ -151,14 +141,18 @@ internal fun FullScreenVideoScreen(reels: List<Reel>, likedReels: List<String>, 
                             Column(
                                 horizontalAlignment = Alignment.CenterHorizontally,
                                 modifier = Modifier.clickable {
-                                    //isLikedState[page].value = !isLikedState[page].value
                                     if (!likedReels.contains(reels[page].id)) {
                                         likesState[page].value += 1
                                     } else {
                                         likesState[page].value -= 1
                                     }
 
-                                    sendLikesStatus(Pair(reels[page],if ( !likedReels.contains(reels[page].id)) "like" else "unlike"))
+                                    sendLikesStatus(
+                                        Pair(
+                                            reels[page],
+                                            if (!likedReels.contains(reels[page].id)) "like" else "unlike"
+                                        )
+                                    )
                                 }
                             ) {
                                 Icon(
@@ -168,7 +162,7 @@ internal fun FullScreenVideoScreen(reels: List<Reel>, likedReels: List<String>, 
                                     modifier = Modifier.size(32.dp)
                                 )
                                 Text(
-                                    text = likesState[page].value.toString(),
+                                    text = likesState[page].intValue.toString(),
                                     color = Color.White,
                                     style = MaterialTheme.typography.labelMedium
                                 )
@@ -177,16 +171,20 @@ internal fun FullScreenVideoScreen(reels: List<Reel>, likedReels: List<String>, 
                             Spacer(modifier = Modifier.height(8.dp))
 
                             // Share Button
-                            if (reels[page].link.isNotEmpty()) {
+                            if (!reels[page].link.isNullOrEmpty()) {
                                 Column(
                                     horizontalAlignment = Alignment.CenterHorizontally,
                                     modifier = Modifier.clickable {
                                         val sendIntent = android.content.Intent().apply {
                                             action = android.content.Intent.ACTION_SEND
-                                            putExtra(android.content.Intent.EXTRA_TEXT, reels[page].link)
+                                            putExtra(
+                                                android.content.Intent.EXTRA_TEXT,
+                                                reels[page].link
+                                            )
                                             type = "text/plain"
                                         }
-                                        val shareIntent = android.content.Intent.createChooser(sendIntent, null)
+                                        val shareIntent =
+                                            android.content.Intent.createChooser(sendIntent, null)
                                         context.startActivity(shareIntent)
                                     }
                                 ) {
@@ -222,9 +220,9 @@ internal fun FullScreenVideoScreen(reels: List<Reel>, likedReels: List<String>, 
                                 .padding(horizontal = 24.dp)
                         ) {
                             // Description Text
-                            if (reels[page].descriptionText.isNotEmpty()) {
+                            if (!reels[page].descriptionText.isNullOrEmpty()) {
                                 Text(
-                                    text = reels[page].descriptionText,
+                                    text = reels[page].descriptionText ?: "",
                                     color = Color.White,
                                     style = MaterialTheme.typography.bodyMedium,
                                     maxLines = 2,
@@ -236,13 +234,16 @@ internal fun FullScreenVideoScreen(reels: List<Reel>, likedReels: List<String>, 
                             Spacer(modifier = Modifier.height(16.dp))
 
                             // Action Button
-                            if (reels[page].link.isNotEmpty() && reels[page].buttonText.isNotEmpty()) {
+                            if (!reels[page].link.isNullOrEmpty() && !reels[page].buttonText.isNullOrEmpty()) {
                                 Button(
                                     onClick = {
                                         sendEvents(Pair(reels[page], "CLK"))
                                         try {
                                             val uri = Uri.parse(reels[page].link)
-                                            val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, uri)
+                                            val intent = android.content.Intent(
+                                                android.content.Intent.ACTION_VIEW,
+                                                uri
+                                            )
                                             context.startActivity(intent)
                                         } catch (e: Exception) {
                                             // Show error toast or snackbar
@@ -262,7 +263,7 @@ internal fun FullScreenVideoScreen(reels: List<Reel>, likedReels: List<String>, 
                                         .padding(bottom = 16.dp)
                                 ) {
                                     Text(
-                                        text = reels[page].buttonText,
+                                        text = reels[page].buttonText ?: "",
                                         color = Color.Black,
                                         style = MaterialTheme.typography.labelLarge.copy(
                                             fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
@@ -271,7 +272,7 @@ internal fun FullScreenVideoScreen(reels: List<Reel>, likedReels: List<String>, 
                                 }
                             }
 
-                            Spacer(modifier = Modifier.height(screenHeight.times(0.08f)))
+                            Spacer(modifier = Modifier.fillMaxHeight(0.08f))
                         }
                     }
                 }
@@ -290,6 +291,57 @@ internal fun FullScreenVideoScreen(reels: List<Reel>, likedReels: List<String>, 
     }
 }
 
+@Composable
+fun VideoPlayer(
+    modifier: Modifier = Modifier,
+    url: String,
+    isPlaying: Boolean
+) {
+    val context = LocalContext.current
+
+    val exoPlayer = remember(context) {
+        ExoPlayer.Builder(context).build().apply {
+            repeatMode = ExoPlayer.REPEAT_MODE_ONE
+        }
+    }
+
+    var initialized by remember { mutableStateOf(false) }
+
+    LaunchedEffect(isPlaying) {
+        if (!initialized) {
+            val mediaItem = MediaItem.fromUri(url.toUri())
+            exoPlayer.setMediaItem(mediaItem)
+            exoPlayer.prepare()
+            initialized = true
+        }
+        exoPlayer.playWhenReady = isPlaying
+    }
+
+    DisposableEffect(exoPlayer) {
+        onDispose {
+            exoPlayer.release()
+        }
+    }
+
+
+    if (isPlaying) {
+
+        AndroidView(
+            modifier = modifier.fillMaxSize(),
+            factory = {
+                PlayerView(context).apply {
+                    player = exoPlayer
+                    useController = false // Ensures controllers are hidden
+                    layoutParams = FrameLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.MATCH_PARENT
+                    )
+                }
+            }
+        )
+    }
+
+}
 
 internal fun saveLikedReels(idList: List<String>, sharedPreferences: SharedPreferences) {
     val jsonArray = JSONArray(idList)

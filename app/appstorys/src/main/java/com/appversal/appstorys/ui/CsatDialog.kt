@@ -43,17 +43,16 @@ internal fun CsatDialog(
     csatDetails: CSATDetails
 ) {
     // Local content
-    val localContent = remember {
+    val localContent: Map<String, String> = remember {
         mapOf(
-            "title" to csatDetails.title.ifEmpty { "We'd love your feedback!" },
-            "description" to csatDetails.descriptionText.ifEmpty { "This will help us improve your experience" },
-            "thankyouText" to csatDetails.thankyouText.ifEmpty { "Thank you for your feedback!" },
-            "thankyouDescription" to csatDetails.thankyouDescription.ifEmpty { "We appreciate you taking the time to share your thoughts." },
+            "title" to (csatDetails.title?.takeIf { it.isNotEmpty() } ?: "We'd love your feedback!"),
+            "description" to (csatDetails.descriptionText?.takeIf { it.isNotEmpty() } ?: "This will help us improve your experience"),
+            "thankyouText" to (csatDetails.thankyouText?.takeIf { it.isNotEmpty() } ?: "Thank you for your feedback!"),
+            "thankyouDescription" to (csatDetails.thankyouDescription?.takeIf { it.isNotEmpty() } ?: "We appreciate you taking the time to share your thoughts."),
             "rateUsText" to "Rate Us!",
             "feedbackPrompt" to "Please tell us what went wrong."
         )
     }
-
 
     // Styling
     val styling = remember {
@@ -72,7 +71,7 @@ internal fun CsatDialog(
 
     // Feedback options
     val feedbackOptions = remember {
-        if (csatDetails.feedbackOption.toList().isNotEmpty()){
+        if (csatDetails.feedbackOption?.toList()?.isNotEmpty() == true){
             csatDetails.feedbackOption.toList()
         }else{
             listOf(
@@ -155,17 +154,19 @@ internal fun CsatDialog(
                 )
             }
 
-            AnimatedVisibility(
-                visible = showThanks,
-                enter = fadeIn(),
-                exit = fadeOut()
-            ) {
-                ThankYouContent(
-                    localContent = localContent,
-                    styling = styling,
-                    onDone = onDismiss,
-                    image = csatDetails.thankyouImage
-                )
+            if (csatDetails.thankyouImage != null){
+                AnimatedVisibility(
+                    visible = showThanks,
+                    enter = fadeIn(),
+                    exit = fadeOut()
+                ) {
+                    ThankYouContent(
+                        localContent = localContent,
+                        styling = styling,
+                        onDone = onDismiss,
+                        image = csatDetails.thankyouImage
+                    )
+                }
             }
         }
     }

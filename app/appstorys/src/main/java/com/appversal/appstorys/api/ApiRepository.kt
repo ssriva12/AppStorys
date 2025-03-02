@@ -1,5 +1,6 @@
 package com.appversal.appstorys.api
 
+import android.util.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -16,6 +17,7 @@ internal class ApiRepository(private val apiService: ApiService) {
             }) {
                 is ApiResult.Success -> result.data
                 is ApiResult.Error -> {
+                    Log.e("ApiRepository", "Error getting access token: ${result.message}")
                     println("Error getting access token: ${result.message}")
                     null
                 }
@@ -24,7 +26,7 @@ internal class ApiRepository(private val apiService: ApiService) {
     }
 
 
-    suspend fun getCampaigns(accessToken: String, screenName: String, positions: List<String>?): List<String> {
+    suspend fun getCampaigns(accessToken: String, screenName: String, positions: List<String>?): List<String>? {
         return withContext(Dispatchers.IO) {
             when (val result = safeApiCall {
                 apiService.trackScreen(
@@ -35,6 +37,8 @@ internal class ApiRepository(private val apiService: ApiService) {
                 is ApiResult.Success -> result.data
                 is ApiResult.Error -> {
                     println("Error getting campaigns: ${result.message}")
+                    Log.e("ApiRepository", "Error getting campaigns: ${result.message}")
+
                     emptyList()
                 }
             }
@@ -57,6 +61,8 @@ internal class ApiRepository(private val apiService: ApiService) {
                 is ApiResult.Success -> result.data
                 is ApiResult.Error -> {
                     println("Error getting campaign data: ${result.message}")
+                    Log.e("ApiRepository", "Error getting campaign data: ${result.message}")
+
                     null
                 }
             }
