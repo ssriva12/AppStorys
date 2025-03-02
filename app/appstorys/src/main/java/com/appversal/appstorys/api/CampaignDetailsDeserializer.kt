@@ -35,7 +35,7 @@ internal class CampaignResponseDeserializer : JsonDeserializer<CampaignResponse>
                 else -> null
             }
 
-            val position = jsonObject.get("position")?.takeIf { !it.isJsonNull }?.asString?.removeDoubleQuotes()
+            val position = campaignObject.get("position")?.takeIf { !it.isJsonNull }?.asString?.removeDoubleQuotes()
 
             Campaign(
                 id = campaignObject.get("id")?.takeIf { !it.isJsonNull }?.asString?.removeDoubleQuotes() ?: "",

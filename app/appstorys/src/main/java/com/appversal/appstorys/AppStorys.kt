@@ -617,9 +617,9 @@ class AppStorys private constructor(
             campaignsData.value.filter { it.campaignType == "WID" && it.details is WidgetDetails }
                 .firstOrNull { it.position == position }
         val widgetDetails = campaign?.details as? WidgetDetails
-        Log.i("widgetDetails", campaign.toString())
 
         if (widgetDetails != null) {
+            Log.i("WidgetPics", widgetDetails.widgetImages.toString())
 
             if (widgetDetails.type == "full") {
 
@@ -693,7 +693,7 @@ class AppStorys private constructor(
                                 )
                             },
                             contentScale = contentScale,
-                            imageUrl = it,
+                            imageUrl = widgetDetails.widgetImages[index].image ?: "",
                             placeHolder = placeHolder,
                             height = heightInDp ?: staticHeight,
                         )
