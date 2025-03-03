@@ -59,6 +59,7 @@ import com.google.android.exoplayer2.Player
 import com.google.android.exoplayer2.ui.StyledPlayerView
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.json.JSONArray
@@ -149,7 +150,6 @@ internal fun StoryScreen(
     onStoryGroupEnd: () -> Unit,
     sendEvent: (Pair<StorySlide, String>) -> Unit
 ) {
-
     var currentSlideIndex by remember { mutableIntStateOf(0) }
     val currentSlide = slides.get(currentSlideIndex)
     val uriHandler = LocalUriHandler.current
@@ -158,11 +158,9 @@ internal fun StoryScreen(
     var isMuted by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
 
-
     // Progress state
     var progress by remember { mutableFloatStateOf(0f) }
     val animatedProgress by animateFloatAsState(targetValue = progress)
-
 
     // Track completed slides
     val completedSlides = remember { mutableStateListOf<Int>() }
@@ -196,6 +194,7 @@ internal fun StoryScreen(
             }
         }
     }
+
     // Clean up player when dialog is dismissed
     DisposableEffect(Unit) {
         onDispose {
@@ -203,11 +202,16 @@ internal fun StoryScreen(
         }
     }
 
-    LaunchedEffect(currentSlideIndex, isImage) {
+    // -- IMPORTANT CHANGE: Better handling of slide types --
+    LaunchedEffect(currentSlideIndex) {
+        // Reset progress when slide changes
         progress = 0f
 
+        // Send impression event for the current slide
         sendEvent(Pair(currentSlide, "IMP"))
+
         if (isImage) {
+            // Create new timer for image slide
             var accumulatedTime = 0L
             var startTime = System.currentTimeMillis()
 
@@ -216,44 +220,61 @@ internal fun StoryScreen(
                     val elapsedTime = System.currentTimeMillis() - startTime
                     progress = ((accumulatedTime + elapsedTime).toFloat() / storyDuration).coerceIn(0f, 1f)
                 } else {
+                    // Pause timer while holding
                     accumulatedTime += System.currentTimeMillis() - startTime
                     while (isHolding) delay(16)
                     startTime = System.currentTimeMillis()
                 }
                 delay(16)
             }
+            // Move to next slide when timer completes
             handleSlideCompletion()
-        }
-    }
-
-
-    // Load video when slide changes
-    LaunchedEffect(currentSlide) {
-        if (!isImage) {
+        } else {
+            // Load video for video slide
             currentSlide.video?.let { videoUrl ->
+                // Cancel any ongoing video loading
+                exoPlayer.stop()
+                exoPlayer.clearMediaItems()
+
+                // Load new video
                 exoPlayer.setMediaItem(MediaItem.fromUri(videoUrl.toUri()))
                 exoPlayer.prepare()
 
-                // Track video progress and handle completion
-                exoPlayer.addListener(object : Player.Listener {
-                    override fun onPlaybackStateChanged(state: Int) {
-                        if (state == Player.STATE_ENDED) {
-                            handleSlideCompletion()
+                // Update progress in a loop that will be canceled when this LaunchedEffect is canceled
+                var videoJob = launch {
+                    while (true) {
+                        if (!isHolding && exoPlayer.duration > 0) {
+                            progress = (exoPlayer.currentPosition.toFloat() / exoPlayer.duration).coerceIn(0f, 1f)
                         }
+                        delay(16)
                     }
-                })
+                }
+
+                // Make sure to cancel the job when this effect is canceled
+                try {
+                    // Wait for external cancellation
+                    awaitCancellation()
+                } finally {
+                    videoJob.cancel()
+                }
             }
         }
     }
 
-    // Track video progress
-    LaunchedEffect(Unit) {
-        while (true) {
-            if (exoPlayer.duration > 0) {
-                progress =
-                    (exoPlayer.currentPosition.toFloat() / exoPlayer.duration).coerceIn(0f, 1f)
+    // Add listener for video completion
+    DisposableEffect(currentSlide) {
+        val listener = object : Player.Listener {
+            override fun onPlaybackStateChanged(state: Int) {
+                if (state == Player.STATE_ENDED && !isImage) {
+                    handleSlideCompletion()
+                }
             }
-            delay(16) // Update roughly every frame
+        }
+
+        exoPlayer.addListener(listener)
+
+        onDispose {
+            exoPlayer.removeListener(listener)
         }
     }
 
@@ -266,7 +287,6 @@ internal fun StoryScreen(
         }
         context.startActivity(Intent.createChooser(shareIntent, "Share via"))
     }
-
 
     Dialog(
         onDismissRequest = onDismiss,
@@ -298,11 +318,8 @@ internal fun StoryScreen(
                                     isHolding = false
                                 }
                             }
-
                         },
                         onTap = { tapOffset ->
-
-
                             if (!isHolding){
                                 // Determine if tap was on left or right side
                                 val screenWidth = this.size.width
@@ -323,19 +340,64 @@ internal fun StoryScreen(
                                         }
                                         currentSlideIndex++
                                     } else {
-                                        //onDismiss()
                                         onStoryGroupEnd()
                                         currentSlideIndex = 0
                                         completedSlides.clear()
-
                                     }
                                 }
                             }
-
                         }
                     )
                 }
         ) {
+            // Content
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                // Image content
+                if (currentSlide.image != null) {
+                    Image(
+                        painter = rememberAsyncImagePainter(currentSlide.image),
+                        contentDescription = null,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Fit
+                    )
+                }
+
+                // Video content
+                if (currentSlide.video != null) {
+                    AndroidView(
+                        factory = { ctx ->
+                            StyledPlayerView(ctx).apply {
+                                player = exoPlayer
+                                layoutParams = FrameLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT)
+                                useController = false
+                            }
+                        },
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
+
+                // Link button if available
+                if (currentSlide.link?.isNotEmpty() == true && currentSlide.buttonText?.isNotEmpty() == true) {
+                    Button(
+                        onClick = {
+                            uriHandler.openUri(currentSlide.link)
+                            sendEvent(Pair(currentSlide, "CLK"))
+                        },
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .padding(bottom = 32.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color.White
+                        )
+                    ) {
+                        Text(text = currentSlide.buttonText, color = Color.Black)
+                    }
+                }
+            }
+
             // Progress indicators - one for each slide
             Row(
                 modifier = Modifier
@@ -400,31 +462,51 @@ internal fun StoryScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .align(Alignment.TopEnd)
-                    .padding(8.dp),
+                    .padding(18.dp),
                 horizontalArrangement = Arrangement.End
             ) {
                 if (!isImage){
-                    IconButton(onClick = {
-                        isMuted = !isMuted
-                        if (isMuted){
-                            exoPlayer.volume = 0f
-                        }else{
-                            exoPlayer.volume = 1f
-                        }
-                    }) {
 
+                    Box(
+                        modifier = Modifier
+                            .size(32.dp) // Adjust size to reduce padding
+                            .background(
+                                color = Color.Black.copy(alpha = 0.2f),
+                                shape = CircleShape
+                            )
+                            .clickable(onClick = {
+                                isMuted = !isMuted
+                                if (isMuted){
+                                    exoPlayer.volume = 0f
+                                }else{
+                                    exoPlayer.volume = 1f
+                                }
+                            }),
+                        contentAlignment = Alignment.Center // Centers the icon inside the box
+                    ) {
                         Icon(
                             painter = if (isMuted) painterResource(R.drawable.mute) else painterResource(R.drawable.volume),
                             contentDescription = if (isMuted) "Unmute" else "Mute",
                             tint = Color.White
                         )
                     }
+                    Spacer(Modifier.width(4.dp))
                 }
+
 
 
                 // Share button
                 if (currentSlide.link?.isNotEmpty() == true && currentSlide.buttonText?.isNotEmpty() == true){
-                    IconButton(onClick = shareContent) {
+                    Box(
+                        modifier = Modifier
+                            .size(32.dp) // Adjust size to reduce padding
+                            .background(
+                                color = Color.Black.copy(alpha = 0.2f),
+                                shape = CircleShape
+                            )
+                            .clickable(onClick = shareContent),
+                        contentAlignment = Alignment.Center // Centers the icon inside the box
+                    ) {
                         Icon(
                             imageVector = Icons.Default.Share,
                             contentDescription = "Share",
@@ -432,85 +514,28 @@ internal fun StoryScreen(
                             modifier = Modifier.size(24.dp)
                         )
                     }
+                    Spacer(Modifier.width(4.dp))
                 }
 
                 // Close button
-                IconButton(onClick = onDismiss) {
+                Box(
+                    modifier = Modifier
+                        .size(32.dp) // Adjust size to reduce padding
+                        .background(
+                            color = Color.Black.copy(alpha = 0.2f),
+                            shape = CircleShape
+                        )
+                        .clickable(onClick = onDismiss),
+                    contentAlignment = Alignment.Center // Centers the icon inside the box
+                ) {
                     Icon(
                         imageVector = Icons.Default.Close,
                         contentDescription = "Close",
                         tint = Color.White,
-                        modifier = Modifier.size(28.dp)
-                    )
-                }
-            }
-
-
-            // Content
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                // Image content
-                if (currentSlide.image != null) {
-                    Image(
-                        painter = rememberAsyncImagePainter(currentSlide.image),
-                        contentDescription = null,
-                        modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Fit
+                        modifier = Modifier.size(28.dp) // Adjust icon size if needed
                     )
                 }
 
-                // Video content
-                if (currentSlide.video != null) {
-                    AndroidView(
-                        factory = { ctx ->
-                            StyledPlayerView(ctx).apply {
-                                player = exoPlayer
-                                layoutParams = FrameLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT)
-                                useController = false
-                            }
-                        },
-                        modifier = Modifier.fillMaxSize()
-                    )
-                }
-
-                // Link button if available
-                if (currentSlide.link?.isNotEmpty() == true && currentSlide.buttonText?.isNotEmpty() == true) {
-                    Button(
-                        onClick = {
-                            uriHandler.openUri(currentSlide.link)
-                            sendEvent(Pair(currentSlide, "CLK"))
-                                  },
-                        modifier = Modifier
-                            .align(Alignment.BottomCenter)
-                            .padding(bottom = 32.dp),
-                                colors = ButtonDefaults.buttonColors(
-                                containerColor = Color.White
-                                )
-
-                    ) {
-                        Text(text = currentSlide.buttonText, color = Color.Black)
-                    }
-                }
-
-                // Invisible touch areas for left/right navigation (for visual debugging)
-                /* Uncomment for debugging touch areas
-                Row(modifier = Modifier.fillMaxSize()) {
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .fillMaxHeight()
-                            .background(Color.Red.copy(alpha = 0.2f))
-                    )
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .fillMaxHeight()
-                            .background(Color.Green.copy(alpha = 0.2f))
-                    )
-                }
-                */
             }
         }
     }
@@ -595,56 +620,3 @@ internal fun getViewedStories(sharedPreferences: SharedPreferences): List<String
     val jsonArray = JSONArray(jsonString)
     return List(jsonArray.length()) { jsonArray.getString(it) }
 }
-
-/*
-*
-* val storyGroups = listOf(
-        StoryGroup(
-            id = "6b3c7e5c-3a5b-49cd-9b25-25d6c81b7b2a",
-            name = "How To",
-            thumbnail = "https://appstorysmediabucket.s3.amazonaws.com/story_groups/Enjoy_Zero_Convenience_Fee_BOOK_NOW_10.png",
-            ringColor = "#FD5F03",
-            nameColor = "#000000",
-            order = 1,
-            slides = listOf(
-                StorySlide(
-                    id = "8a42c55f-e302-41e9-be82-42c49adf1bdd",
-                    parent = "6b3c7e5c-3a5b-49cd-9b25-25d6c81b7b2a",
-                    image = null,
-                    video = "https://appstorysmediabucket.s3.amazonaws.com/story_slides/Untitled_design_14.mp4",
-                    link = "",
-                    buttonText = "",
-                    order = 1
-                )
-            )
-        ),
-        StoryGroup(
-            id = "b7d85bf2-09c6-4a6f-880c-814f0889f357",
-            name = "Success",
-            thumbnail = "https://appstorysmediabucket.s3.amazonaws.com/story_groups/Enjoy_Zero_Convenience_Fee_BOOK_NOW_13.png",
-            ringColor = "#FD5F03",
-            nameColor = "#000000",
-            order = 3,
-            slides = listOf(
-                StorySlide(
-                    id = "755cc594-29af-4c75-ab8b-24dc4935942b",
-                    parent = "b7d85bf2-09c6-4a6f-880c-814f0889f357",
-                    image = null,
-                    video = "https://appstorysmediabucket.s3.amazonaws.com/story_slides/47_3.mp4",
-                    link = "https://appstorys.com/",
-                    buttonText = "AppStorys",
-                    order = 2
-                ),
-                StorySlide(
-                    id = "b6fb0fe8-e151-4b7e-be76-3abfbe0f59fb",
-                    parent = "b7d85bf2-09c6-4a6f-880c-814f0889f357",
-                    image = null,
-                    video = "https://appstorysmediabucket.s3.amazonaws.com/story_slides/29_2.mp4",
-                    link = "",
-                    buttonText = "",
-                    order = 2
-                )
-            )
-        )
-    )
-    * */

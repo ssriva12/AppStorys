@@ -304,8 +304,10 @@ private fun FeedbackContent(
             value = additionalComments,
             onValueChange = onCommentsChanged,
             modifier = Modifier.fillMaxWidth(),
-            placeholder = { Text("Additional comments") },
+            placeholder = { Text("Additional comments", color = Color.Gray) },
             colors = TextFieldDefaults.colors(
+                focusedTextColor = Color.Black, // Change to desired color
+                unfocusedTextColor = Color.Black, // Change to desired color
                 unfocusedContainerColor = Color.Transparent,
                 focusedContainerColor = Color.Transparent
             )
