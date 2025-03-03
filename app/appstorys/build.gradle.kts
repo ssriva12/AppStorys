@@ -78,7 +78,7 @@ afterEvaluate {
                 from(components["release"])
                 groupId = "com.appversal"
                 artifactId = "appstorys"
-                version = "3.0.0"
+                version = "3.0.2"
 
 
             }
