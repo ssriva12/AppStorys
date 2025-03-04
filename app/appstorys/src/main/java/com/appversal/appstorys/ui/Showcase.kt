@@ -26,6 +26,7 @@ import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.appversal.appstorys.api.Tooltip
 
 
 internal class ShowcaseDuration(val enterMillis: Int, val exitMillis: Int) {
@@ -41,7 +42,7 @@ internal sealed interface ShowcaseDisplayState {
 }
 
 
-internal class HighlightProperties internal constructor(
+class HighlightProperties internal constructor(
     val drawHighlight: DrawScope.(LayoutCoordinates) -> Unit,
     val highlightBounds: Rect
 )
@@ -110,7 +111,7 @@ private fun ShowcaseBackground(
     }
 }
 
-internal sealed interface ShowcaseHighlight {
+sealed interface ShowcaseHighlight {
     /**
      * Create a HighlightProperties object which contains the details of the highlight.
      */

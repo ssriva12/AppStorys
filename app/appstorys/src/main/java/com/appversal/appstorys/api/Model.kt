@@ -28,6 +28,15 @@ data class TrackActionStories(
     val story_slide: String?
 )
 
+
+
+data class TrackActionTooltips(
+    val campaign_id: String?,
+    val user_id: String?,
+    val event_type: String?,
+    val tooltip_id: String?
+)
+
 data class ReelActionRequest(
     val user_id: String?,
     val event_type: String?,
@@ -215,4 +224,55 @@ data class Reel(
     val likes: Int?,
     val thumbnail: String?,
     val link: String?
+)
+
+data class TooltipsDetails(
+    @SerializedName("_id") val id: String?,
+    val campaign: String?,
+    val name: String?,
+    val tooltips: List<Tooltip>?,
+    @SerializedName("created_at") val createdAt: String?
+)
+
+data class Tooltip(
+    val type: String?,
+    val url: String?,
+    val link: String?,
+    val target: String?,
+    val order: Int?,
+    val styling: TooltipStyling?,
+    @SerializedName("_id") val id: String?
+)
+
+data class TooltipStyling(
+    val tooltipDimentions: TooltipDimensions?,
+    val highlightRadius: String?,
+    val highlightPadding: String?,
+    val backgroudColor: String?,
+    val enableBackdrop: Boolean?,
+    val tooltipArrow: TooltipArrow?,
+    val spacing: TooltipSpacing?,
+    val closeButton: Boolean?
+)
+
+data class TooltipDimensions(
+    val height: String?,
+    val width: String?,
+    val cornerRadius: String?
+)
+
+data class TooltipArrow(
+    val height: String?,
+    val width: String?
+)
+
+data class TooltipSpacing(
+    val padding: TooltipPadding?
+)
+
+data class TooltipPadding(
+    val paddingTop: Int?,
+    val paddingRight: Int?,
+    val paddingBottom: Int?,
+    val paddingLeft: Int?
 )

@@ -1,5 +1,6 @@
 package com.appversal.appstorys.api
 
+import android.util.Log
 import com.appversal.appstorys.utils.removeDoubleQuotes
 import com.google.gson.Gson
 import com.google.gson.JsonDeserializationContext
@@ -20,6 +21,7 @@ internal class CampaignResponseDeserializer : JsonDeserializer<CampaignResponse>
         val userId = jsonObject.get("user_id")?.takeIf { !it.isJsonNull }?.asString?.removeDoubleQuotes() ?: ""
         val campaignsJsonArray = jsonObject.getAsJsonArray("campaigns")?.takeIf { !it.isJsonNull }
 
+        Log.i("CampaignsJson", campaignsJsonArray.toString())
         val campaigns = campaignsJsonArray?.map { campaignElement ->
             val campaignObject = campaignElement.asJsonObject
             val campaignType = campaignObject.get("campaign_type")?.asString ?: ""
@@ -31,6 +33,7 @@ internal class CampaignResponseDeserializer : JsonDeserializer<CampaignResponse>
                 "WID" -> context.deserialize(detailsJson, WidgetDetails::class.java)
                 "BAN" -> context.deserialize(detailsJson, BannerDetails::class.java)
                 "REL" -> context.deserialize(detailsJson, ReelsDetails::class.java)
+                "TTP" -> context.deserialize(detailsJson, TooltipsDetails::class.java)
                 "STR" -> context.deserialize(detailsJson, object : TypeToken<List<StoryGroup>>() {}.type)
                 else -> null
             }

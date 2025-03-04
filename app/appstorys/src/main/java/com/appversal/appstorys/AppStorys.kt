@@ -8,9 +8,6 @@ import android.net.Uri
 import android.util.Log
 import android.util.Patterns
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.clickable
@@ -79,11 +76,15 @@ import androidx.compose.ui.window.DialogProperties
 import com.appversal.appstorys.api.ReelActionRequest
 import com.appversal.appstorys.api.ReelStatusRequest
 import com.appversal.appstorys.api.StoryGroup
+import com.appversal.appstorys.api.Tooltip
+import com.appversal.appstorys.api.TooltipsDetails
 import com.appversal.appstorys.api.TrackActionStories
+import com.appversal.appstorys.api.TrackActionTooltips
 import com.appversal.appstorys.ui.StoryAppMain
 import com.appversal.appstorys.ui.getLikedReels
 import com.appversal.appstorys.ui.saveLikedReels
-import com.appversal.appstorys.ui.saveViewedStories
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.combine
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -108,8 +109,15 @@ class AppStorys private constructor(
     private val _impressions = MutableStateFlow<List<String>>(emptyList())
     private val impressions: StateFlow<List<String>> get() = _impressions
 
-    private val _targets = MutableStateFlow<Map<String, LayoutCoordinates>>(emptyMap())
-    private val targets: StateFlow<Map<String, LayoutCoordinates>> = _targets.asStateFlow()
+    private val _viewsCoordinates = MutableStateFlow<Map<String, LayoutCoordinates>>(emptyMap())
+    private val viewsCoordinates: StateFlow<Map<String, LayoutCoordinates>> =
+        _viewsCoordinates.asStateFlow()
+
+    private val _tooltipTargetView = MutableStateFlow<Tooltip?>(null)
+    private val tooltipTargetView: StateFlow<Tooltip?> = _tooltipTargetView.asStateFlow()
+
+    private val _tooltipViewed = MutableStateFlow<List<String>>(emptyList())
+    private val tooltipViewed: StateFlow<List<String>> = _tooltipViewed.asStateFlow()
 
     private val _showcaseVisible = MutableStateFlow(false)
     private val showcaseVisible: StateFlow<Boolean> = _showcaseVisible.asStateFlow()
@@ -133,6 +141,7 @@ class AppStorys private constructor(
     init {
         coroutineScope.launch {
             fetchData()
+            showCaseInformation()
         }
     }
 
@@ -161,7 +170,7 @@ class AppStorys private constructor(
                 }
 
             }
-        }catch (exception: Exception){
+        } catch (exception: Exception) {
             Log.e("AppStorys", exception.message ?: "Error Fetch Data")
         }
 
@@ -176,12 +185,18 @@ class AppStorys private constructor(
                         _impressions.emit(emptyList())
                         currentScreen = screenName
                     }
-                    val campaignList = repository.getCampaigns(accessToken, currentScreen, positionList)
+                    val campaignList =
+                        repository.getCampaigns(accessToken, currentScreen, positionList)
                     Log.d("campaignList", campaignList.toString())
 
                     if (campaignList?.isNotEmpty() == true) {
                         val campaignsData =
-                            repository.getCampaignData(accessToken, userId, campaignList, attributes)
+                            repository.getCampaignData(
+                                accessToken,
+                                userId,
+                                campaignList,
+                                attributes
+                            )
                         Log.d("campaignsData", campaignsData.toString())
 
                         campaignsData?.campaigns?.let { _campaigns.emit(it) }
@@ -189,7 +204,7 @@ class AppStorys private constructor(
                     }
                 }
             }
-        }catch (exception: Exception){
+        } catch (exception: Exception) {
             Log.e("AppStorys", exception.message ?: "Error Fetch Data")
         }
     }
@@ -307,7 +322,8 @@ class AppStorys private constructor(
     ) {
         val campaignsData = campaigns.collectAsStateWithLifecycle()
 
-        val campaign = campaignsData.value.firstOrNull { it.campaignType == "FLT" && it.details is FloaterDetails }
+        val campaign =
+            campaignsData.value.firstOrNull { it.campaignType == "FLT" && it.details is FloaterDetails }
 
         val floaterDetails = when (val details = campaign?.details) {
             is FloaterDetails -> details
@@ -347,41 +363,97 @@ class AppStorys private constructor(
         }
     }
 
+
     @Composable
-    fun ToolTipWrapper(modifier: Modifier, requesterView: @Composable (Modifier) -> Unit) {
-        val visibleShowcase by showcaseVisible.collectAsStateWithLifecycle()
+    fun ToolTipWrapper(
+        targetModifier: Modifier,
+        targetKey: String,
+        requesterView: @Composable (Modifier) -> Unit
+    ) {
         var position by remember { mutableStateOf(TooltipPopupPosition()) }
         val view = LocalView.current.rootView
+        val visibleShowcase by showcaseVisible.collectAsStateWithLifecycle()
+        val currentToolTipTarget by tooltipTargetView.collectAsStateWithLifecycle()
 
-        TooltipPopup(
-            modifier = modifier
-                .padding(start = 8.dp),
-            requesterView = { modifier ->
+        LaunchedEffect(currentToolTipTarget) {
+            if (currentToolTipTarget?.target == targetKey){
+                val campaign = campaigns.value.firstOrNull { it.campaignType == "TTP" && it.details is TooltipsDetails }
 
-                requesterView(modifier.onGloballyPositioned { coordinates ->
-                    _targets.value = _targets.value.toMutableMap().apply {
-                        put(KEY_FLOATER, coordinates)
-                    }
-                    position = calculateTooltipPopupPosition(view, coordinates)
-                })
-            },
-            backgroundColor = Color.White,
-            position = position,
-            isShowTooltip = visibleShowcase,
-            tooltipContent = {
-                TooltipContent()
+                repository.trackTooltipsActions(accessToken, TrackActionTooltips(
+                    campaign_id = campaign?.id,
+                    user_id = userId,
+                    event_type = "IMP",
+                    tooltip_id = currentToolTipTarget!!.id
 
+                ))
             }
-        )
+        }
+
+        Box(modifier = targetModifier) {
+            TooltipPopup(
+                modifier = Modifier
+                    .padding(start = 8.dp),
+                requesterView = { modifier ->
+                    requesterView(modifier.onGloballyPositioned { coordinates ->
+                        _viewsCoordinates.value = _viewsCoordinates.value.toMutableMap().apply {
+                            put(targetKey, coordinates)
+                        }
+                        position = calculateTooltipPopupPosition(view, coordinates)
+                    })
+                },
+                backgroundColor = Color.White,
+                position = position,
+                isShowTooltip = visibleShowcase && currentToolTipTarget?.target == targetKey,
+                onDismissRequest = {
+                    coroutineScope.launch {
+                        _tooltipTargetView.emit(null)
+                        _showcaseVisible.emit(false)
+                    }
+                },
+                tooltip = if (currentToolTipTarget?.target == targetKey) currentToolTipTarget else null,
+                tooltipContent = {
+                    if (currentToolTipTarget?.target == targetKey){
+                        TooltipContent(tooltip = currentToolTipTarget!!, exitUnit = {
+                            coroutineScope.launch {
+                                _tooltipTargetView.emit(null)
+                                _showcaseVisible.emit(false)
+                            }
+                        }, onClick = {
+                            coroutineScope.launch{
+                                if (!currentToolTipTarget!!.link.isNullOrEmpty()){
+                                    if (!isValidUrl(currentToolTipTarget!!.link)) {
+                                        currentToolTipTarget!!.link?.let { navigateToScreen(it) }
+                                    } else {
+                                        currentToolTipTarget!!.link?.let { openUrl(it) }
+                                    }
+
+                                    val campaign = campaigns.value.firstOrNull { it.campaignType == "TTP" && it.details is TooltipsDetails }
+
+                                    repository.trackTooltipsActions(accessToken, TrackActionTooltips(
+                                        campaign_id = campaign?.id,
+                                        user_id = userId,
+                                        event_type = "CLK",
+                                        tooltip_id = currentToolTipTarget!!.id
+
+                                    ))
+                                }
+                            }
+                        })
+                    }
+                }
+            )
+        }
+
     }
 
 
     @Composable
-    fun ShowCase() {
-        val coordinates by targets.collectAsStateWithLifecycle()
+    fun ShowCaseScreen() {
+        val coordinates by viewsCoordinates.collectAsStateWithLifecycle()
         val visibleShowcase by showcaseVisible.collectAsStateWithLifecycle()
+        val currentToolTipTarget by tooltipTargetView.collectAsStateWithLifecycle()
 
-        coordinates[KEY_FLOATER]?.let {
+        coordinates[currentToolTipTarget?.target]?.let {
             ShowcaseView(
                 visible = visibleShowcase,
                 targetCoordinates = it,
@@ -389,6 +461,35 @@ class AppStorys private constructor(
             )
         }
     }
+
+    private fun showCaseInformation() {
+        coroutineScope.launch {
+            combine(
+                campaigns,
+                viewsCoordinates
+            ) { campaignList, coordinates -> campaignList to coordinates }.collectLatest { (campaignList, coordinates) ->
+                val campaign = campaignList.firstOrNull { it.campaignType == "TTP" && it.details is TooltipsDetails }
+                val tooltipsDetails = campaign?.details as? TooltipsDetails
+                if (tooltipsDetails != null) {
+                    for (tooltip in tooltipsDetails.tooltips?.sortedBy { it.order } ?: emptyList()) {
+                        if (tooltip.target != null && !_tooltipViewed.value.contains(tooltip.target)) {
+
+                            if (coordinates.contains(tooltip.target)) {
+                                while (_tooltipTargetView.value != null) {
+                                    delay(500L)
+                                }
+                                _tooltipTargetView.emit(tooltip)
+                                _showcaseVisible.emit(true)
+                                _tooltipViewed.emit(tooltipViewed.value.toMutableList().apply { add(tooltip.target) })
+
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
 
     @Composable
     fun Stories() {
@@ -593,6 +694,7 @@ class AppStorys private constructor(
             ?.firstOrNull { it.campaignType == "BAN" }
             ?: campaignsData.value.firstOrNull { it.campaignType == "BAN" }
 
+        Log.i("BannedPinner", campaign.toString())
         val bannerDetails = when (val details = campaign?.details) {
             is BannerDetails -> details
             else -> null
@@ -716,7 +818,7 @@ class AppStorys private constructor(
             })
             val heightInDp: Dp? = widgetDetails.height?.dp
 
-            LaunchedEffect(pagerState.currentPage,  isVisible) {
+            LaunchedEffect(pagerState.currentPage, isVisible) {
                 if (isVisible) {
                     campaign?.id?.let {
                         trackCampaignActions(
@@ -783,7 +885,8 @@ class AppStorys private constructor(
         var isVisible by remember { mutableStateOf(false) }
 
         if (widgetDetails != null && campaign.id != null &&
-            !disabledCampaigns.value.contains(campaign.id) && widgetDetails.widgetImages != null && widgetDetails.type == "half") {
+            !disabledCampaigns.value.contains(campaign.id) && widgetDetails.widgetImages != null && widgetDetails.type == "half"
+        ) {
 
             val heightInDp: Dp? = widgetDetails.height?.dp
             val widgetImagesPairs = widgetDetails.widgetImages.turnToPair()
@@ -880,10 +983,7 @@ class AppStorys private constructor(
 
     private fun clickEvent(url: String?, campaignId: String, widgetImageId: String? = null) {
 
-
-        if(url.isNullOrEmpty()){
-            null
-        } else {
+        if(!url.isNullOrEmpty()){
             if (!isValidUrl(url)) {
                 navigateToScreen(url)
             } else {
@@ -896,7 +996,7 @@ class AppStorys private constructor(
 
 
     private fun List<WidgetImage>.turnToPair(): List<Pair<WidgetImage, WidgetImage>> {
-        if (this.isEmpty()){
+        if (this.isEmpty()) {
             return emptyList()
         }
         // Sort by order and pair consecutive elements

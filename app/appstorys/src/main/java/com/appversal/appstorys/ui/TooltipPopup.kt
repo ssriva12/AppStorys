@@ -1,19 +1,18 @@
 package com.appversal.appstorys.ui
 
 import android.view.View
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material3.Icon
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -31,83 +30,62 @@ import androidx.compose.ui.window.PopupPositionProvider
 import androidx.compose.ui.window.PopupProperties
 import kotlin.math.roundToInt
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import com.appversal.appstorys.R
+import coil.compose.AsyncImage
+import coil.request.CachePolicy
+import coil.request.ImageRequest
+import com.appversal.appstorys.api.Tooltip
+import com.appversal.appstorys.utils.toColor
 
 
 @Composable
-internal fun TooltipContent(){
-    Column(modifier = Modifier.fillMaxWidth(0.8f).padding(13.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+internal fun TooltipContent(tooltip: Tooltip, onClick: () -> Unit, exitUnit: () -> Unit){
+        val context = LocalContext.current
 
-        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween){
+        val imageRequest = ImageRequest.Builder(context)
+            .data(tooltip.url)
+            .memoryCacheKey(tooltip.url)
+            .diskCacheKey(tooltip.url)
 
-            Row(verticalAlignment = Alignment.CenterVertically){
-                Image(
-                    modifier = Modifier.size(30.dp),
-                    painter = painterResource(R.drawable.home_icon),
-                    contentDescription = ""
-                )
+            .diskCachePolicy(CachePolicy.ENABLED)
+            .memoryCachePolicy(CachePolicy.ENABLED)
+            .crossfade(true)
+            .build()
 
-                Spacer(modifier = Modifier.width(5.dp))
-
-                Text(
-                    modifier = Modifier,
-                    text = "Home",
-                    style = TextStyle(
-                        fontSize = 22.sp,
-                        lineHeight = 18.sp,
-                        fontWeight = FontWeight.Medium,
-                    ),
-                    color = Color.Black,
-                )
-
+    Box{
+        AsyncImage(
+            model = imageRequest,
+            contentDescription = null,
+            modifier = Modifier.fillMaxSize().clip(
+                if (tooltip.styling?.tooltipDimentions?.cornerRadius != null) RoundedCornerShape(
+                    tooltip.styling.tooltipDimentions.cornerRadius.toIntOrNull()?.dp ?: 12.dp) else MaterialTheme.shapes.medium
+            ).clickable {
+                onClick()
             }
 
-
-
-            Text(
-                modifier = Modifier,
-                text = "Step 1/4",
-                style = TextStyle(
-                    fontSize = 14.sp,
-                    lineHeight = 18.sp,
-                    fontWeight = FontWeight.Medium,
-                ),
-                color = Color.Black.copy(alpha = 0.5f),
+        )
+        if (tooltip.styling?.closeButton == true) {
+            Icon(
+                modifier = Modifier
+                    .padding(15.dp)
+                    .size(30.dp)
+                    .align(Alignment.TopEnd)
+                    .clickable {
+                        exitUnit()
+                    },
+                tint = Color.White,
+                imageVector = Icons.Filled.Close,
+                contentDescription = ""
             )
         }
-
-
-            Text(
-                modifier = Modifier.padding(top = 10.dp, end = 10.dp),
-                text = "View your bills, credit score & personalized offers.",
-                style = TextStyle(
-                    fontSize = 16.sp,
-                    lineHeight = 18.sp,
-                    fontWeight = FontWeight.Medium,
-                ),
-                color = Color.Black.copy(alpha = 0.5f),
-            )
-
-
-
-        Button(
-            modifier = Modifier.align(Alignment.End),
-            onClick = {},
-            colors = ButtonDefaults.buttonColors(containerColor = Color.Green)
-
-        ) {
-            Text("Next", color = Color.Black)
-        }
-
-
     }
+
 }
+
+
 
 
 /**
@@ -117,40 +95,42 @@ internal fun TooltipContent(){
 internal fun TooltipPopup(
     modifier: Modifier = Modifier,
     isShowTooltip: Boolean,
+    tooltip: Tooltip?,
     position: TooltipPopupPosition,
     backgroundShape: Shape = MaterialTheme.shapes.medium,
     backgroundColor: Color = Color.White,
+    onDismissRequest: (() -> Unit),
     requesterView: @Composable (Modifier) -> Unit,
     tooltipContent: @Composable () -> Unit,
 ) {
 
 
     if (isShowTooltip) {
+
         TooltipPopup(
             backgroundShape = backgroundShape,
             backgroundColor = backgroundColor,
-            onDismissRequest = {
-                //isShowTooltip = isShowTooltip.not()
-            },
+            onDismissRequest = onDismissRequest,
+            tooltip = tooltip,
             position = position,
         ) {
             tooltipContent()
         }
     }
 
-    requesterView(
-        modifier
-    )
+    requesterView(modifier)
 
 }
 
 @Composable
 internal fun TooltipPopup(
     position: TooltipPopupPosition,
+    tooltip: Tooltip?,
     backgroundShape: Shape,
     backgroundColor: Color,
-    arrowHeight: Dp = 4.dp,
-    horizontalPadding: Dp = 16.dp,
+    arrowHeight: Dp = 8.dp,
+    arrowWidth: Dp = 8.dp,
+    horizontalPadding: Dp = 8.dp,
     onDismissRequest: (() -> Unit)? = null,
     content: @Composable () -> Unit
 ) {
@@ -200,13 +180,29 @@ internal fun TooltipPopup(
     ) {
         BubbleLayout(
             modifier = Modifier
+                .let { base ->
+                    tooltip?.styling?.tooltipDimentions?.height?.toIntOrNull()?.dp?.let { height ->
+                        base.then(Modifier.height(height))
+                    } ?: base.then(Modifier.height(200.dp))
+                }
+                .let { base ->
+                    tooltip?.styling?.tooltipDimentions?.width?.toIntOrNull()?.dp?.let { width ->
+                        base.then(Modifier.width(width))
+                    } ?: base.then(Modifier.width(300.dp))
+                }.let { base ->
+                    tooltip?.styling?.spacing?.padding?.let { padding ->
+                        base.then(Modifier.padding(start = padding.paddingLeft?.dp ?: (0).dp, end = padding.paddingRight?.dp ?: (0).dp, top = padding.paddingTop?.dp ?: (0).dp, bottom = padding.paddingBottom?.dp ?: (0).dp))
+                    } ?: base
+                }
                 .padding(horizontal = horizontalPadding)
                 .background(
-                    color = backgroundColor,
-                    shape = backgroundShape,
+                    color = tooltip?.styling?.backgroudColor.toColor(backgroundColor) ,
+                    shape = if (tooltip!!.styling?.tooltipDimentions?.cornerRadius != null) RoundedCornerShape(
+                        tooltip.styling?.tooltipDimentions?.cornerRadius?.toIntOrNull()?.dp ?: 12.dp) else backgroundShape,
                 ),
             alignment = position.alignment,
-            arrowHeight = arrowHeight,
+            arrowHeight = tooltip.styling?.tooltipArrow?.height?.toIntOrNull()?.dp ?: arrowHeight,
+            arrowWidth = tooltip.styling?.tooltipArrow?.width?.toIntOrNull()?.dp ?: arrowWidth,
             backgroundColor = backgroundColor,
             arrowPositionX = arrowPositionX,
         ) {
@@ -222,13 +218,13 @@ internal fun BubbleLayout(
     alignment: TooltipAlignment = TooltipAlignment.TopCenter,
     backgroundColor: Color,
     arrowHeight: Dp,
+    arrowWidth: Dp,
     arrowPositionX: Float,
     content: @Composable () -> Unit
 ) {
-
-    val arrowHeightPx = with(LocalDensity.current) {
-        arrowHeight.toPx()
-    }
+    val density = LocalDensity.current
+    val arrowHeightPx = with(density) { arrowHeight.toPx() }
+    val arrowWidthPx = with(density) { arrowWidth.toPx() }
 
     Box(
         modifier = modifier
@@ -236,27 +232,26 @@ internal fun BubbleLayout(
                 if (arrowPositionX <= 0f) return@drawBehind
 
                 val isTopCenter = alignment == TooltipAlignment.TopCenter
-
                 val path = Path()
 
                 if (isTopCenter) {
                     val position = Offset(arrowPositionX, 0f)
                     path.apply {
-                        moveTo(x = position.x, y = position.y)
-                        lineTo(x = position.x - arrowHeightPx, y = position.y)
-                        lineTo(x = position.x, y = position.y - arrowHeightPx)
-                        lineTo(x = position.x + arrowHeightPx, y = position.y)
-                        lineTo(x = position.x, y = position.y)
+                        moveTo(position.x, position.y)
+                        lineTo(position.x - arrowWidthPx / 2, position.y)
+                        lineTo(position.x, position.y - arrowHeightPx)
+                        lineTo(position.x + arrowWidthPx / 2, position.y)
+                        close()
                     }
                 } else {
                     val arrowY = drawContext.size.height
                     val position = Offset(arrowPositionX, arrowY)
                     path.apply {
-                        moveTo(x = position.x, y = position.y)
-                        lineTo(x = position.x + arrowHeightPx, y = position.y)
-                        lineTo(x = position.x, y = position.y + arrowHeightPx)
-                        lineTo(x = position.x - arrowHeightPx, y = position.y)
-                        lineTo(x = position.x, y = position.y)
+                        moveTo(position.x, position.y)
+                        lineTo(position.x + arrowWidthPx / 2, position.y)
+                        lineTo(position.x, position.y + arrowHeightPx)
+                        lineTo(position.x - arrowWidthPx / 2, position.y)
+                        close()
                     }
                 }
 
