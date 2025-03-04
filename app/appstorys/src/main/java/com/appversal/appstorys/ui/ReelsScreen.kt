@@ -86,11 +86,23 @@ internal fun FullScreenVideoScreen(
     val pagerState = rememberPagerState(initialPage = startIndex, pageCount = { reels.size })
     val context = LocalContext.current
 
-    // Track likes state for each reel
     val likesState = remember {
-        reels.map { reel ->
-            mutableIntStateOf(reel.likes ?: 0)
+        mutableStateMapOf<String, Int>().apply {
+            reels.forEach { reel ->
+                reel.id?.let { this[it] = reel.likes ?: 0 }
+            }
         }
+    }
+
+
+    LaunchedEffect(Unit) {
+        likedReels.forEach {
+            likesState[it] = likesState[it]?.plus(1) ?: 1
+        }
+    }
+
+    LaunchedEffect(pagerState.currentPage) {
+        sendEvents(Pair(reels[pagerState.currentPage], "IMP"))
     }
 
 
@@ -143,9 +155,14 @@ internal fun FullScreenVideoScreen(
                                 horizontalAlignment = Alignment.CenterHorizontally,
                                 modifier = Modifier.clickable {
                                     if (!likedReels.contains(reels[page].id)) {
-                                        likesState[page].value += 1
+                                        reels[page].id?.let{
+                                            likesState[it] = likesState[reels[page].id]?.plus(1) ?: 1
+                                        }
+
                                     } else {
-                                        likesState[page].value -= 1
+                                        reels[page].id?.let{
+                                            likesState[it] = likesState[reels[page].id]?.minus(1) ?: 1
+                                        }
                                     }
 
                                     sendLikesStatus(
@@ -163,7 +180,7 @@ internal fun FullScreenVideoScreen(
                                     modifier = Modifier.size(32.dp)
                                 )
                                 Text(
-                                    text = likesState[page].intValue.toString(),
+                                    text = likesState[reels[page].id].toString(),
                                     color = Color.White,
                                     style = MaterialTheme.typography.labelMedium
                                 )
