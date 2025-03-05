@@ -15,10 +15,9 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.appversal.appstorys.AppStorys
 import com.appversal.appstorys.R
-import com.appversal.appstorys.ui.PinnedBanner
 import com.appversal.appstorys.utils.pxToDp
 
-class PinnedBannerView @JvmOverloads constructor(
+class WidgetView @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,
     defStyleAttr: Int = 0
@@ -42,8 +41,8 @@ class PinnedBannerView @JvmOverloads constructor(
         // Inflate ComposeView
         val composeView = ComposeView(context).apply {
             setContent {
-                AppStorys.PinnedBanner(
-                    modifier = Modifier.fillMaxWidth(),
+
+                AppStorys.Widget(
                     contentScale = contentScale,
                     staticHeight = staticHeight.value,
                     staticWidth = staticWidth.value,
@@ -68,12 +67,11 @@ class PinnedBannerView @JvmOverloads constructor(
 
         if (staticHeight.value != newHeight) {
             staticHeight.value = newHeight
-            Log.i("StaticHeight", "Updated Height in DP: ${staticHeight.value}")
         }
 
         if (staticWidth.value != newWidth) {
             staticWidth.value = newWidth
-            Log.i("StaticWidth", "Updated Width in DP: ${staticWidth.value}")
         }
     }
 }
+

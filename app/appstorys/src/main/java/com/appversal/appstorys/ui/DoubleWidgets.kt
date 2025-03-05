@@ -40,7 +40,8 @@ internal fun DoubleWidgets(
     unSelectedColor: Color = Color.Gray,
     selectedLength: Dp = 20.dp,
     dotSize: Dp = 8.dp,
-    spacingBetweenImagesAndDots: Dp = 12.dp // Space between images and dots
+    spacingBetweenImagesAndDots: Dp = 12.dp,
+    width: Dp? = null
 ) {
     val isDragged by pagerState.interactionSource.collectIsDraggedAsState()
 
@@ -68,7 +69,7 @@ internal fun DoubleWidgets(
         Spacer(modifier = Modifier.height(spacingBetweenImagesAndDots))
         if (itemsCount > 1) {
             DotsIndicator(
-                modifier = Modifier.padding(horizontal = 8.dp),
+                modifier = Modifier.padding(horizontal = 8.dp).then(if (width != null) Modifier.width(width) else Modifier.fillMaxWidth()),
                 totalDots = itemsCount,
                 selectedIndex = pagerState.currentPage % itemsCount,
                 dotSize = dotSize,

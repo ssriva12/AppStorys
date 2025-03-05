@@ -8,6 +8,21 @@
     <com.appversal.appstorys.ui.xml.PinnedBannerView
         android:layout_width="match_parent"
         android:layout_height="100dp"
-        app:position="top"
         app:placeHolder="@drawable/ic_launcher_foreground"/>
+
+
+    <com.appversal.appstorys.ui.xml.WidgetView
+        android:layout_width="match_parent"
+        android:layout_height="100dp"
+        app:position="widget_fifty"
+        app:placeHolder="@drawable/ic_launcher_foreground"/>
+
+    <com.appversal.appstorys.ui.xml.WidgetView
+        android:layout_width="match_parent"
+        android:layout_height="100dp"
+        app:position="widget_four"
+        app:placeHolder="@drawable/ic_launcher_foreground"/>
+
+
+
 </LinearLayout>

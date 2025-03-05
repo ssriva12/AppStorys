@@ -711,9 +711,11 @@ object AppStorys {
         val campaignsData = campaigns.collectAsStateWithLifecycle()
         val disabledCampaigns = disabledCampaigns.collectAsStateWithLifecycle()
 
-        val campaign = position?.let { pos -> campaignsData.value.filter { it.position == pos } }
-            ?.firstOrNull { it.campaignType == "BAN" }
-            ?: campaignsData.value.firstOrNull { it.campaignType == "BAN" }
+        Log.i("position", position.toString())
+        val campaign =
+            campaignsData.value.filter { it.campaignType == "BAN" && it.details is BannerDetails }
+                .firstOrNull { it.position == position }
+
 
         Log.i("BannedPinner", campaign.toString())
         val bannerDetails = when (val details = campaign?.details) {
@@ -772,6 +774,7 @@ object AppStorys {
         modifier: Modifier = Modifier,
         contentScale: ContentScale = ContentScale.FillWidth,
         staticHeight: Dp = 200.dp,
+        staticWidth: Dp? = null,
         placeHolder: Drawable?,
         position: String?
     ) {
@@ -790,6 +793,7 @@ object AppStorys {
                 FullWidget(
                     modifier = modifier,
                     staticHeight = staticHeight,
+                    staticWidth = staticWidth,
                     placeHolder = placeHolder,
                     contentScale = contentScale,
                     position = position
@@ -799,6 +803,7 @@ object AppStorys {
                 DoubleWidget(
                     modifier = modifier,
                     staticHeight = staticHeight,
+                    staticWidth = staticWidth,
                     position = position
                 )
             }
@@ -812,6 +817,7 @@ object AppStorys {
         modifier: Modifier = Modifier,
         contentScale: ContentScale = ContentScale.FillWidth,
         staticHeight: Dp = 200.dp,
+        staticWidth: Dp? = null,
         placeHolder: Drawable?,
         position: String?
     ) {
@@ -826,9 +832,6 @@ object AppStorys {
         // Track if the widget is visible in the viewport
         var isVisible by remember { mutableStateOf(false) }
 
-//        Log.i("WidgetDetails", campaignsData.value.filter{
-//            it.campaignType == "WID" && it.details is WidgetDetails
-//        }.toString())
 
         if (widgetDetails?.widgetImages != null && widgetDetails.widgetImages.isNotEmpty() && campaign.id != null && !disabledCampaigns.value.contains(
                 campaign.id
@@ -838,6 +841,8 @@ object AppStorys {
                 widgetDetails.widgetImages.count()
             })
             val heightInDp: Dp? = widgetDetails.height?.dp
+            val widthInDp: Dp? = widgetDetails.width?.dp
+
 
             LaunchedEffect(pagerState.currentPage, isVisible) {
                 if (isVisible) {
@@ -865,6 +870,7 @@ object AppStorys {
                 },
                 pagerState = pagerState,
                 itemsCount = widgetDetails.widgetImages.count(),
+                width = staticWidth,
                 itemContent = { index ->
                     widgetDetails.widgetImages[index].link?.let {
                         CarousalImage(
@@ -879,6 +885,7 @@ object AppStorys {
                             imageUrl = widgetDetails.widgetImages[index].image ?: "",
                             placeHolder = placeHolder,
                             height = heightInDp ?: staticHeight,
+                            width = widthInDp ?: staticWidth
                         )
                     }
                 }
@@ -890,6 +897,7 @@ object AppStorys {
     fun DoubleWidget(
         modifier: Modifier = Modifier,
         staticHeight: Dp = 200.dp,
+        staticWidth: Dp? = null,
         position: String?
     ) {
         val campaignsData = campaigns.collectAsStateWithLifecycle()
@@ -910,6 +918,8 @@ object AppStorys {
         ) {
 
             val heightInDp: Dp? = widgetDetails.height?.dp
+            val widthInDp: Dp? = widgetDetails.width?.dp
+
             val widgetImagesPairs = widgetDetails.widgetImages.turnToPair()
             val pagerState = rememberPagerState(pageCount = {
                 widgetImagesPairs.count()
@@ -950,6 +960,7 @@ object AppStorys {
                 },
                 pagerState = pagerState,
                 itemsCount = widgetImagesPairs.count(),
+                width = widthInDp ?: staticWidth,
                 itemContent = { index ->
                     val (leftImage, rightImage) = widgetImagesPairs[index]
                     Row(

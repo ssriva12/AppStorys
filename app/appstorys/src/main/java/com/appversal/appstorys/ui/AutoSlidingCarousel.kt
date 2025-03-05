@@ -24,6 +24,7 @@ import kotlinx.coroutines.delay
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyRow
@@ -59,7 +60,8 @@ internal fun AutoSlidingCarousel(
     selectedColor: Color = Color.Black,
     unSelectedColor: Color = Color.Gray,
     selectedLength: Dp = 20.dp,
-    dotSize: Dp = 8.dp
+    dotSize: Dp = 8.dp,
+    width: Dp? = null
 ) {
     val isDragged by pagerState.interactionSource.collectIsDraggedAsState()
     if (!isDragged) {
@@ -84,7 +86,7 @@ internal fun AutoSlidingCarousel(
 
 
     Column(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier.then(if (width != null) Modifier.width(width) else Modifier.fillMaxWidth()),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Card(
@@ -209,6 +211,7 @@ internal fun CarousalImage(
     imageUrl: String,
     contentScale: ContentScale = ContentScale.Crop,
     height: Dp = 200.dp,
+    width: Dp? = null,
     placeHolder: Drawable?
 ) {
     val context = LocalContext.current
@@ -238,7 +241,7 @@ internal fun CarousalImage(
             painter = painter,
             contentDescription = null,
             contentScale = contentScale,
-            modifier = modifier.height(height)
+            modifier = modifier.height(height).then(if (width != null) Modifier.width(width) else Modifier)
         )
     }else{
         val imageRequest = ImageRequest.Builder(context)
@@ -257,7 +260,7 @@ internal fun CarousalImage(
             model = imageRequest,
             contentDescription = null,
             contentScale = contentScale,
-            modifier = modifier.height(height)
+            modifier = modifier.height(height).then(if (width != null) Modifier.width(width) else Modifier)
         )
     }
 
