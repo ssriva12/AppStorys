@@ -20,11 +20,12 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        setContent {
+        setContentView(R.layout.main_activity)
+        /*setContent {
             CarousalTheme {
                 MyApp()
             }
-        }
+        }*/
     }
 }
 
@@ -41,7 +42,20 @@ fun MyApp() {
 
     Box(modifier = Modifier.fillMaxSize()) {
         Scaffold(
-            modifier = Modifier.fillMaxSize()
+            modifier = Modifier.fillMaxSize(),
+            bottomBar = {
+
+                Box{
+
+                    campaignManager.ToolTipWrapper(
+                        targetModifier = Modifier
+                            .padding(start = 30.dp),
+                        targetKey = "Home Button",
+                    ) {
+                        Button(modifier = it, onClick = {}) { }
+                    }
+                }
+            }
         ) { innerPadding ->
             Box(modifier = Modifier.fillMaxSize()) {
 
@@ -61,16 +75,6 @@ fun AllCampaigns() {
     Box {
         LazyColumn(modifier = Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally) {
 
-
-            item{
-                campaignManager.ToolTipWrapper(
-                    targetModifier = Modifier
-                        .padding(start = 30.dp),
-                    targetKey = "home_button",
-                ) {
-                    Button(modifier = it, onClick = {}) { }
-                }
-            }
             item {
 
                 campaignManager.Widget(

@@ -77,6 +77,8 @@ import com.appversal.appstorys.api.ReelActionRequest
 import com.appversal.appstorys.api.ReelStatusRequest
 import com.appversal.appstorys.api.StoryGroup
 import com.appversal.appstorys.api.Tooltip
+import com.appversal.appstorys.api.TooltipDimensions
+import com.appversal.appstorys.api.TooltipStyling
 import com.appversal.appstorys.api.TooltipsDetails
 import com.appversal.appstorys.api.TrackActionStories
 import com.appversal.appstorys.api.TrackActionTooltips
@@ -91,14 +93,32 @@ import okhttp3.Request
 import okhttp3.RequestBody
 import org.json.JSONObject
 
-class AppStorys private constructor(
-    private val context: Application,
-    private val appId: String,
-    private val accountId: String,
-    private val userId: String,
-    private val attributes: List<Map<String, Any>>?,
-    private val navigateToScreen: (String) -> Unit
-) {
+object AppStorys {
+    private lateinit var context: Application
+    private lateinit var appId: String
+    private lateinit var accountId: String
+    private lateinit var userId: String
+    private var attributes: List<Map<String, Any>>? = null
+    private lateinit var navigateToScreen: (String) -> Unit
+
+    private const val KEY_FLOATER = "KEY_FLOATER"
+
+    fun initialize(
+        context: Application,
+        appId: String,
+        accountId: String,
+        userId: String,
+        attributes: List<Map<String, Any>>? = null,
+        navigateToScreen: (String) -> Unit
+    ) {
+        this.context = context
+        this.appId = appId
+        this.accountId = accountId
+        this.userId = userId
+        this.attributes = attributes
+        this.navigateToScreen = navigateToScreen
+        initiateData()
+    }
 
     private val _campaigns = MutableStateFlow<List<Campaign>>(emptyList())
     private val campaigns: StateFlow<List<Campaign>> get() = _campaigns
@@ -138,7 +158,9 @@ class AppStorys private constructor(
     private var isDataFetched = false
     private val coroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
-    init {
+    private fun initiateData() {
+        if (isDataFetched) return
+        isDataFetched = true
         coroutineScope.launch {
             fetchData()
             showCaseInformation()
@@ -147,8 +169,6 @@ class AppStorys private constructor(
 
 
     private suspend fun fetchData() {
-        if (isDataFetched) return
-        isDataFetched = true
 
         try {
             val accessToken = repository.getAccessToken(appId, accountId)
@@ -683,7 +703,8 @@ class AppStorys private constructor(
     fun PinnedBanner(
         modifier: Modifier = Modifier,
         contentScale: ContentScale = ContentScale.FillWidth,
-        staticHeight: Dp = 200.dp,
+        staticHeight: Dp = 100.dp,
+        staticWidth: Dp? = null,
         placeHolder: Drawable?,
         position: String?
     ) {
@@ -720,7 +741,7 @@ class AppStorys private constructor(
                 },
                 imageUrl = bannerUrl ?: "",
                 lottieUrl = bannerDetails.lottie_data,
-                width = bannerDetails.width?.dp,
+                width = bannerDetails.width?.dp ?: staticWidth,
                 exitIcon = style?.isClose ?: false,
                 exitUnit = {
                     val ids: ArrayList<String> = ArrayList(_disabledCampaigns.value)
@@ -1055,34 +1076,6 @@ class AppStorys private constructor(
         } catch (_: Exception) {
 
         }
-
-    }
-
-    companion object {
-        @Volatile
-        private var instance: AppStorys? = null
-
-        fun getInstance(
-            context: Application,
-            appId: String,
-            accountId: String,
-            userId: String,
-            attributes: List<Map<String, Any>>? = null,
-            navigateToScreen: (String) -> Unit
-        ): AppStorys {
-            return instance ?: synchronized(this) {
-                instance ?: AppStorys(
-                    context = context,
-                    appId = appId,
-                    accountId = accountId,
-                    userId = userId,
-                    navigateToScreen = navigateToScreen,
-                    attributes = attributes
-                ).also { instance = it }
-            }
-        }
-
-        private const val KEY_FLOATER = "KEY_FLOATER"
 
     }
 

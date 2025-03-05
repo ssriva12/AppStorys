@@ -20,16 +20,19 @@ class App : Application() {
         //13555479-077f-445e-87f0-e6eae2e215c5
 
         // Initialize CampaignManager with userId and appId
-        appStorys = AppStorys.getInstance(
-            this,
-            appId = "1163a1a2-61a8-486c-b263-7252f9a502c2", // Replace with App Id
-            accountId = "5bb1378d-9f32-4da8-aed1-1ee44d086db7", // Replace with Account Id
-            userId = "cheqtest",// Replace with User Id
+        AppStorys.initialize(
+            context = this,
+            appId = "1163a1a2-61a8-486c-b263-7252f9a502c2",
+            accountId = "5bb1378d-9f32-4da8-aed1-1ee44d086db7",
+            userId = "cheqtest",
             attributes = attributes,
-            navigateToScreen =
-            {
-                navigateToScreen(it)
-            })
+            navigateToScreen = { screen ->
+                println("Navigating to $screen")
+                navigateToScreen(screen)
+            }
+        )
+
+        appStorys = AppStorys
     }
 
 
