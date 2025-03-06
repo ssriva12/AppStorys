@@ -245,7 +245,7 @@ data class Tooltip(
 )
 
 data class TooltipStyling(
-    val tooltipDimentions: TooltipDimensions?,
+    val tooltipDimensions: TooltipDimensions?,
     val highlightRadius: String?,
     val highlightPadding: String?,
     val backgroudColor: String?,
@@ -262,8 +262,8 @@ data class TooltipDimensions(
 )
 
 data class TooltipArrow(
-    val height: String?,
-    val width: String?
+    val arrowHeight: String?,
+    val arrowWidth: String?
 )
 
 data class TooltipSpacing(

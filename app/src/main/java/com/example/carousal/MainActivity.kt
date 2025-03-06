@@ -3,6 +3,7 @@ package com.example.carousal
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.Button
@@ -19,13 +20,11 @@ import com.example.carousal.ui.theme.CarousalTheme
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
-        setContentView(R.layout.main_activity)
-        /*setContent {
+        setContent {
             CarousalTheme {
                 MyApp()
             }
-        }*/
+        }
     }
 }
 
@@ -39,32 +38,31 @@ fun MyApp() {
         listOf("widget_one", "widget_three", "widget_fifty", "widget_four")
     )
 
+    var edgeToEdgePadding by remember { mutableStateOf(PaddingValues()) }
 
     Box(modifier = Modifier.fillMaxSize()) {
         Scaffold(
             modifier = Modifier.fillMaxSize(),
             bottomBar = {
 
-                Box{
-
                     campaignManager.ToolTipWrapper(
-                        targetModifier = Modifier
-                            .padding(start = 30.dp),
-                        targetKey = "Home Button",
+                        targetModifier = Modifier,
+                        targetKey = "about_button",
                     ) {
                         Button(modifier = it, onClick = {}) { }
                     }
-                }
+
             }
         ) { innerPadding ->
-            Box(modifier = Modifier.fillMaxSize()) {
-
+            edgeToEdgePadding = innerPadding
+            Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
                 AllCampaigns()
-
             }
         }
         campaignManager.ShowCaseScreen()
+
     }
+
 
 }
 
@@ -85,33 +83,6 @@ fun AllCampaigns() {
             }
 
 
-            item{
-                campaignManager.ToolTipWrapper(
-                    targetModifier = Modifier
-                        .padding(start = 30.dp),
-                    targetKey = "contact_button",
-                ) {
-                    Button(modifier = it, onClick = {}) { }
-                }
-            }
-
-            item {
-
-                campaignManager.Widget(
-                    placeHolder = context.getDrawable(R.drawable.ic_launcher_foreground),
-                    position = "widget_three"
-                )
-            }
-
-            item{
-                campaignManager.ToolTipWrapper(
-                    targetModifier = Modifier
-                        .padding(start = 30.dp),
-                    targetKey = "Account Button",
-                ) {
-                    Button(modifier = it, onClick = {}) { }
-                }
-            }
 
             item {
                 campaignManager.Widget(

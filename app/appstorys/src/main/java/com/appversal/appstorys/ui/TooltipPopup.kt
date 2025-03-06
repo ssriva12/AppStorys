@@ -1,5 +1,6 @@
 package com.appversal.appstorys.ui
 
+import android.util.Log
 import android.view.View
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -49,19 +50,27 @@ internal fun TooltipContent(tooltip: Tooltip, onClick: () -> Unit, exitUnit: () 
             .data(tooltip.url)
             .memoryCacheKey(tooltip.url)
             .diskCacheKey(tooltip.url)
-
             .diskCachePolicy(CachePolicy.ENABLED)
             .memoryCachePolicy(CachePolicy.ENABLED)
             .crossfade(true)
             .build()
 
-    Box{
+    Box(modifier = Modifier.then(
+        tooltip.styling?.spacing?.padding?.let { padding ->
+            Modifier.padding(
+                start = padding.paddingLeft?.dp ?: 0.dp,
+                end = padding.paddingRight?.dp ?: 0.dp,
+                top = padding.paddingTop?.dp ?: 0.dp,
+                bottom = padding.paddingBottom?.dp ?: 0.dp
+            )
+        } ?: Modifier
+    )){
         AsyncImage(
             model = imageRequest,
             contentDescription = null,
             modifier = Modifier.fillMaxSize().clip(
-                if (tooltip.styling?.tooltipDimentions?.cornerRadius != null) RoundedCornerShape(
-                    tooltip.styling.tooltipDimentions.cornerRadius.toIntOrNull()?.dp ?: 12.dp) else MaterialTheme.shapes.medium
+                if (tooltip.styling?.tooltipDimensions?.cornerRadius != null) RoundedCornerShape(
+                    tooltip.styling.tooltipDimensions.cornerRadius.toIntOrNull()?.dp ?: 12.dp) else MaterialTheme.shapes.medium
             ).clickable {
                 onClick()
             }
@@ -180,29 +189,26 @@ internal fun TooltipPopup(
     ) {
         BubbleLayout(
             modifier = Modifier
-                .let { base ->
-                    tooltip?.styling?.tooltipDimentions?.height?.toIntOrNull()?.dp?.let { height ->
-                        base.then(Modifier.height(height))
-                    } ?: base.then(Modifier.height(200.dp))
-                }
-                .let { base ->
-                    tooltip?.styling?.tooltipDimentions?.width?.toIntOrNull()?.dp?.let { width ->
-                        base.then(Modifier.width(width))
-                    } ?: base.then(Modifier.width(300.dp))
-                }.let { base ->
-                    tooltip?.styling?.spacing?.padding?.let { padding ->
-                        base.then(Modifier.padding(start = padding.paddingLeft?.dp ?: (0).dp, end = padding.paddingRight?.dp ?: (0).dp, top = padding.paddingTop?.dp ?: (0).dp, bottom = padding.paddingBottom?.dp ?: (0).dp))
-                    } ?: base
-                }
+                .then(
+                    Modifier.height(
+                        tooltip?.styling?.tooltipDimensions?.height?.toIntOrNull()?.dp ?: 200.dp
+                    )
+                )
+                .then(
+
+                    Modifier.width(
+                        tooltip?.styling?.tooltipDimensions?.width?.toIntOrNull()?.dp ?: 300.dp
+                    )
+                )
                 .padding(horizontal = horizontalPadding)
                 .background(
                     color = tooltip?.styling?.backgroudColor.toColor(backgroundColor) ,
-                    shape = if (tooltip!!.styling?.tooltipDimentions?.cornerRadius != null) RoundedCornerShape(
-                        tooltip.styling?.tooltipDimentions?.cornerRadius?.toIntOrNull()?.dp ?: 12.dp) else backgroundShape,
+                    shape = if (tooltip!!.styling?.tooltipDimensions?.cornerRadius != null) RoundedCornerShape(
+                        tooltip.styling?.tooltipDimensions?.cornerRadius?.toIntOrNull()?.dp ?: 12.dp) else backgroundShape,
                 ),
             alignment = position.alignment,
-            arrowHeight = tooltip.styling?.tooltipArrow?.height?.toIntOrNull()?.dp ?: arrowHeight,
-            arrowWidth = tooltip.styling?.tooltipArrow?.width?.toIntOrNull()?.dp ?: arrowWidth,
+            arrowHeight = arrowHeight,
+            arrowWidth =  arrowWidth,
             backgroundColor = backgroundColor,
             arrowPositionX = arrowPositionX,
         ) {

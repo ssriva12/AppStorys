@@ -184,6 +184,10 @@ object AppStorys {
                     val campaignsData =
                         repository.getCampaignData(accessToken, userId, campaignList, attributes)
                     Log.d("campaignsData", campaignsData.toString())
+                    Log.d(
+                        "campaignsData",
+                        campaignsData?.campaigns?.filter { it.campaignType == "TTP" }.toString()
+                    )
 
                     campaignsData?.campaigns?.let { _campaigns.emit(it) }
                     Log.d("CampaignsValue", _campaigns.toString())
@@ -247,7 +251,12 @@ object AppStorys {
                     val client = OkHttpClient()
                     val request = Request.Builder()
                         .url("https://tracking.appstorys.com/capture-event") // Replace with your actual API endpoint
-                        .post(RequestBody.create("application/json".toMediaTypeOrNull(), requestBody.toString()))
+                        .post(
+                            RequestBody.create(
+                                "application/json".toMediaTypeOrNull(),
+                                requestBody.toString()
+                            )
+                        )
                         .addHeader("Authorization", "Bearer $accessToken")
                         .build()
 
@@ -395,24 +404,27 @@ object AppStorys {
         val visibleShowcase by showcaseVisible.collectAsStateWithLifecycle()
         val currentToolTipTarget by tooltipTargetView.collectAsStateWithLifecycle()
 
+
         LaunchedEffect(currentToolTipTarget) {
-            if (currentToolTipTarget?.target == targetKey){
-                val campaign = campaigns.value.firstOrNull { it.campaignType == "TTP" && it.details is TooltipsDetails }
+            if (currentToolTipTarget?.target == targetKey) {
+                val campaign =
+                    campaigns.value.firstOrNull { it.campaignType == "TTP" && it.details is TooltipsDetails }
 
-                repository.trackTooltipsActions(accessToken, TrackActionTooltips(
-                    campaign_id = campaign?.id,
-                    user_id = userId,
-                    event_type = "IMP",
-                    tooltip_id = currentToolTipTarget!!.id
+                repository.trackTooltipsActions(
+                    accessToken, TrackActionTooltips(
+                        campaign_id = campaign?.id,
+                        user_id = userId,
+                        event_type = "IMP",
+                        tooltip_id = currentToolTipTarget!!.id
 
-                ))
+                    )
+                )
             }
         }
 
         Box(modifier = targetModifier) {
             TooltipPopup(
-                modifier = Modifier
-                    .padding(start = 8.dp),
+                modifier = Modifier,
                 requesterView = { modifier ->
                     requesterView(modifier.onGloballyPositioned { coordinates ->
                         _viewsCoordinates.value = _viewsCoordinates.value.toMutableMap().apply {
@@ -432,33 +444,39 @@ object AppStorys {
                 },
                 tooltip = if (currentToolTipTarget?.target == targetKey) currentToolTipTarget else null,
                 tooltipContent = {
-                    if (currentToolTipTarget?.target == targetKey){
-                        TooltipContent(tooltip = currentToolTipTarget!!, exitUnit = {
-                            coroutineScope.launch {
-                                _tooltipTargetView.emit(null)
-                                _showcaseVisible.emit(false)
-                            }
-                        }, onClick = {
-                            coroutineScope.launch{
-                                if (!currentToolTipTarget!!.link.isNullOrEmpty()){
-                                    if (!isValidUrl(currentToolTipTarget!!.link)) {
-                                        currentToolTipTarget!!.link?.let { navigateToScreen(it) }
-                                    } else {
-                                        currentToolTipTarget!!.link?.let { openUrl(it) }
-                                    }
-
-                                    val campaign = campaigns.value.firstOrNull { it.campaignType == "TTP" && it.details is TooltipsDetails }
-
-                                    repository.trackTooltipsActions(accessToken, TrackActionTooltips(
-                                        campaign_id = campaign?.id,
-                                        user_id = userId,
-                                        event_type = "CLK",
-                                        tooltip_id = currentToolTipTarget!!.id
-
-                                    ))
+                    if (currentToolTipTarget?.target == targetKey) {
+                        TooltipContent(
+                            tooltip = currentToolTipTarget!!,
+                            exitUnit = {
+                                coroutineScope.launch {
+                                    _tooltipTargetView.emit(null)
+                                    _showcaseVisible.emit(false)
                                 }
-                            }
-                        })
+                            },
+                            onClick = {
+                                coroutineScope.launch {
+                                    if (!currentToolTipTarget!!.link.isNullOrEmpty()) {
+                                        if (!isValidUrl(currentToolTipTarget!!.link)) {
+                                            currentToolTipTarget!!.link?.let { navigateToScreen(it) }
+                                        } else {
+                                            currentToolTipTarget!!.link?.let { openUrl(it) }
+                                        }
+
+                                        val campaign =
+                                            campaigns.value.firstOrNull { it.campaignType == "TTP" && it.details is TooltipsDetails }
+
+                                        repository.trackTooltipsActions(
+                                            accessToken, TrackActionTooltips(
+                                                campaign_id = campaign?.id,
+                                                user_id = userId,
+                                                event_type = "CLK",
+                                                tooltip_id = currentToolTipTarget!!.id
+
+                                            )
+                                        )
+                                    }
+                                }
+                            })
                     }
                 }
             )
@@ -473,11 +491,12 @@ object AppStorys {
         val visibleShowcase by showcaseVisible.collectAsStateWithLifecycle()
         val currentToolTipTarget by tooltipTargetView.collectAsStateWithLifecycle()
 
+        Log.i("Styling", currentToolTipTarget?.styling.toString())
         coordinates[currentToolTipTarget?.target]?.let {
             ShowcaseView(
                 visible = visibleShowcase,
                 targetCoordinates = it,
-                highlight = ShowcaseHighlight.Circular()
+                highlight = ShowcaseHighlight.Rectangular(cornerRadius = currentToolTipTarget?.styling?.highlightRadius?.toIntOrNull()?.dp ?: 8.dp, padding = currentToolTipTarget?.styling?.highlightPadding?.toIntOrNull()?.dp ?: 8.dp)
             )
         }
     }
@@ -488,10 +507,13 @@ object AppStorys {
                 campaigns,
                 viewsCoordinates
             ) { campaignList, coordinates -> campaignList to coordinates }.collectLatest { (campaignList, coordinates) ->
-                val campaign = campaignList.firstOrNull { it.campaignType == "TTP" && it.details is TooltipsDetails }
+                val campaign =
+                    campaignList.firstOrNull { it.campaignType == "TTP" && it.details is TooltipsDetails }
                 val tooltipsDetails = campaign?.details as? TooltipsDetails
+                Log.i("tooltipsDetails", tooltipsDetails.toString())
                 if (tooltipsDetails != null) {
-                    for (tooltip in tooltipsDetails.tooltips?.sortedBy { it.order } ?: emptyList()) {
+                    for (tooltip in tooltipsDetails.tooltips?.sortedBy { it.order }
+                        ?: emptyList()) {
                         if (tooltip.target != null && !_tooltipViewed.value.contains(tooltip.target)) {
 
                             if (coordinates.contains(tooltip.target)) {
@@ -500,7 +522,9 @@ object AppStorys {
                                 }
                                 _tooltipTargetView.emit(tooltip)
                                 _showcaseVisible.emit(true)
-                                _tooltipViewed.emit(tooltipViewed.value.toMutableList().apply { add(tooltip.target) })
+                                _tooltipViewed.emit(
+                                    tooltipViewed.value.toMutableList()
+                                        .apply { add(tooltip.target) })
 
                             }
                         }
@@ -1015,7 +1039,7 @@ object AppStorys {
 
     private fun clickEvent(url: String?, campaignId: String, widgetImageId: String? = null) {
 
-        if(!url.isNullOrEmpty()){
+        if (!url.isNullOrEmpty()) {
             if (!isValidUrl(url)) {
                 navigateToScreen(url)
             } else {

@@ -122,7 +122,7 @@ sealed interface ShowcaseHighlight {
      * Class to create a rectangular highlight around the target element.
      * @property cornerRadius The corner radius of the rounded rectangle.
      */
-    data class Rectangular(val cornerRadius: Dp = 8.dp) : ShowcaseHighlight {
+    data class Rectangular(val cornerRadius: Dp = 8.dp, val padding: Dp = 8.dp) : ShowcaseHighlight {
 
         @Composable
         override fun create(
@@ -130,7 +130,7 @@ sealed interface ShowcaseHighlight {
         ): HighlightProperties {
             val highlightBounds = createHighlightBounds(
                 targetCoordinates.boundsInRoot(),
-                with(LocalDensity.current) { 8.dp.toPx() }
+                with(LocalDensity.current) { padding.toPx() }
             )
             return HighlightProperties(
                 drawHighlight = { rectangularHighlight(cornerRadius.toPx(), highlightBounds) },

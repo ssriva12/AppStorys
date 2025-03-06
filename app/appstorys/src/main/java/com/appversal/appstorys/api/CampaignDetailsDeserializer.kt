@@ -16,12 +16,10 @@ internal class CampaignResponseDeserializer : JsonDeserializer<CampaignResponse>
         json: JsonElement, typeOfT: Type, context: JsonDeserializationContext
     ): CampaignResponse {
         val jsonObject = json.asJsonObject
-        val gson = Gson()
 
         val userId = jsonObject.get("user_id")?.takeIf { !it.isJsonNull }?.asString?.removeDoubleQuotes() ?: ""
         val campaignsJsonArray = jsonObject.getAsJsonArray("campaigns")?.takeIf { !it.isJsonNull }
 
-        Log.i("CampaignsJson", campaignsJsonArray.toString())
         val campaigns = campaignsJsonArray?.map { campaignElement ->
             val campaignObject = campaignElement.asJsonObject
             val campaignType = campaignObject.get("campaign_type")?.asString ?: ""
@@ -37,6 +35,7 @@ internal class CampaignResponseDeserializer : JsonDeserializer<CampaignResponse>
                 "STR" -> context.deserialize(detailsJson, object : TypeToken<List<StoryGroup>>() {}.type)
                 else -> null
             }
+            Log.i("campaignType", campaignType.toString())
 
             val position = campaignObject.get("position")?.takeIf { !it.isJsonNull }?.asString?.removeDoubleQuotes()
 
