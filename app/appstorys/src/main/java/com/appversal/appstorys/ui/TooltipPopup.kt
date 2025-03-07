@@ -153,7 +153,7 @@ internal fun TooltipPopup(
     var arrowPositionX by remember { mutableStateOf(position.centerPositionX) }
 
     with(LocalDensity.current) {
-        val arrowPaddingPx = arrowHeight.toPx().roundToInt() * 3
+        val arrowPaddingPx = arrowHeight.toPx().roundToInt() * 2
 
         when (position.alignment) {
             TooltipAlignment.TopCenter -> {
