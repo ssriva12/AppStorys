@@ -4,16 +4,23 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.Button
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.appversal.appstorys.ui.MovablePipVideo
 import com.example.carousal.ui.theme.CarousalTheme
 
 
@@ -40,17 +47,17 @@ fun MyApp() {
 
     var edgeToEdgePadding by remember { mutableStateOf(PaddingValues()) }
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    Box(modifier = Modifier.fillMaxSize().background(Color.White)) {
         Scaffold(
             modifier = Modifier.fillMaxSize(),
             bottomBar = {
 
-                    campaignManager.ToolTipWrapper(
-                        targetModifier = Modifier,
-                        targetKey = "about_button",
-                    ) {
-                        Button(modifier = it, onClick = {}) { }
-                    }
+//                    campaignManager.ToolTipWrapper(
+//                        targetModifier = Modifier,
+//                        targetKey = "about_button",
+//                    ) {
+//                        Button(modifier = it, onClick = {}) { }
+//                    }
 
             }
         ) { innerPadding ->
@@ -59,7 +66,7 @@ fun MyApp() {
                 AllCampaigns()
             }
         }
-        campaignManager.ShowCaseScreen()
+
 
     }
 
@@ -70,8 +77,9 @@ fun MyApp() {
 fun AllCampaigns() {
     val campaignManager = App.appStorys
     val context = LocalContext.current
+    var showPip by remember { mutableStateOf(true) }
     Box {
-        LazyColumn(modifier = Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally) {
+        LazyColumn(modifier = Modifier.fillMaxSize().background(Color.White), horizontalAlignment = Alignment.CenterHorizontally) {
 
             item {
 
@@ -101,6 +109,38 @@ fun AllCampaigns() {
             }
 
             item {
+                campaignManager.ToolTipWrapper(
+                    targetModifier = Modifier,
+                    targetKey = "about_button",
+                ) {
+                    Image(
+                        modifier = it.size(60.dp),
+                        painter = painterResource(id = R.drawable.icon),
+                        contentDescription = "Home Screen Top Image",
+//                        modifier = Modifier
+//                            .size(60.dp),
+                        contentScale = ContentScale.Crop
+                    )
+                }
+            }
+            item {
+                Spacer(Modifier.height(100.dp))
+            }
+
+            item{
+                campaignManager.ToolTipWrapper(
+                    targetModifier = Modifier,
+                    targetKey = "home_button",
+                ) {
+                    Button(
+                        modifier = it,
+                        onClick = {}
+                    ) {
+                    }
+                }
+            }
+
+            item {
                 campaignManager.Widget(
                     placeHolder = context.getDrawable(R.drawable.ic_launcher_foreground),
                     position = "widget_four"
@@ -110,9 +150,20 @@ fun AllCampaigns() {
 
         }
 
-        campaignManager.CSAT(modifier = Modifier.align(Alignment.BottomCenter))
+//        campaignManager.CSAT(modifier = Modifier.align(Alignment.BottomCenter))
 
         campaignManager.Floater(boxModifier = Modifier.align(Alignment.BottomCenter))
+
+        campaignManager.ShowCaseScreen()
+
+        // Add PiP video player here
+        if (showPip) {
+            MovablePipVideo(
+                videoUri = "https://appstorysmediabucket.s3.amazonaws.com/pip/47_3.mp4",
+                fullScreenVideoUri = "https://appstorysmediabucket.s3.amazonaws.com/pip/47_3.mp4",
+                onClose = { showPip = false }
+            )
+        }
 
 
     }
