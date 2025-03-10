@@ -20,7 +20,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.appversal.appstorys.ui.MovablePipVideo
 import com.example.carousal.ui.theme.CarousalTheme
 
 
@@ -77,7 +76,7 @@ fun MyApp() {
 fun AllCampaigns() {
     val campaignManager = App.appStorys
     val context = LocalContext.current
-    var showPip by remember { mutableStateOf(true) }
+//    var showPip by remember { mutableStateOf(true) }
     Box {
         LazyColumn(modifier = Modifier.fillMaxSize().background(Color.White), horizontalAlignment = Alignment.CenterHorizontally) {
 
@@ -154,17 +153,9 @@ fun AllCampaigns() {
 
         campaignManager.Floater(boxModifier = Modifier.align(Alignment.BottomCenter))
 
+        campaignManager.Pip()
+
         campaignManager.ShowCaseScreen()
-
-        // Add PiP video player here
-        if (showPip) {
-            MovablePipVideo(
-                videoUri = "https://appstorysmediabucket.s3.amazonaws.com/pip/47_3.mp4",
-                fullScreenVideoUri = "https://appstorysmediabucket.s3.amazonaws.com/pip/47_3.mp4",
-                onClose = { showPip = false }
-            )
-        }
-
 
     }
 

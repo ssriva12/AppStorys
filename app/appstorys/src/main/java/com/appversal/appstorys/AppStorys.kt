@@ -73,6 +73,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import com.appversal.appstorys.api.PipDetails
 import com.appversal.appstorys.api.ReelActionRequest
 import com.appversal.appstorys.api.ReelStatusRequest
 import com.appversal.appstorys.api.StoryGroup
@@ -82,6 +83,7 @@ import com.appversal.appstorys.api.TooltipStyling
 import com.appversal.appstorys.api.TooltipsDetails
 import com.appversal.appstorys.api.TrackActionStories
 import com.appversal.appstorys.api.TrackActionTooltips
+import com.appversal.appstorys.ui.PipVideo
 import com.appversal.appstorys.ui.StoryAppMain
 import com.appversal.appstorys.ui.getLikedReels
 import com.appversal.appstorys.ui.saveLikedReels
@@ -498,6 +500,56 @@ object AppStorys {
                 targetCoordinates = it,
                 highlight = ShowcaseHighlight.Rectangular(cornerRadius = currentToolTipTarget?.styling?.highlightRadius?.toIntOrNull()?.dp ?: 8.dp, padding = currentToolTipTarget?.styling?.highlightPadding?.toIntOrNull()?.dp ?: 8.dp)
             )
+        }
+    }
+
+    @Composable
+    fun Pip(
+        modifier: Modifier = Modifier,
+    ) {
+
+        var showPip by remember { mutableStateOf(true) }
+        val campaignsData = campaigns.collectAsStateWithLifecycle()
+
+        val campaign =
+            campaignsData.value.firstOrNull { it.campaignType == "PIP" && it.details is PipDetails }
+
+        val pipDetails = when (val details = campaign?.details) {
+            is PipDetails -> details
+            else -> null
+        }
+
+        if (pipDetails != null && !pipDetails.small_video.isNullOrEmpty()) {
+            LaunchedEffect(Unit) {
+                campaign?.id?.let {
+                    trackCampaignActions(it, "IMP")
+                }
+
+            }
+
+
+            Box(modifier = modifier.fillMaxWidth()) {
+
+                if(showPip){
+                    pipDetails?.large_video?.let {
+                        pipDetails.link?.let { it1 ->
+                            PipVideo(
+                                videoUri = pipDetails.small_video,
+                                fullScreenVideoUri = it,
+                                onClose = {
+                                    showPip = false
+                                },
+                                height = pipDetails.height?.dp ?: 180.dp,
+                                width = pipDetails.width?.dp ?: 120.dp,
+                                button_text = pipDetails.button_text.toString(),
+                                link = it1,
+                                position = pipDetails.position.toString()
+                            )
+                        }
+                    }
+                }
+            }
+
         }
     }
 

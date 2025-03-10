@@ -276,3 +276,15 @@ data class TooltipPadding(
     val paddingBottom: Int?,
     val paddingLeft: Int?
 )
+
+data class PipDetails(
+    val id: String?,
+    val position: String?,
+    val small_video: String?,
+    val large_video: String?,
+    val height: Int?,
+    val width: Int?,
+    val link: String?,
+    val campaign: String?,
+    val button_text: String?
+)
