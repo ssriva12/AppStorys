@@ -543,7 +543,25 @@ object AppStorys {
                                 width = pipDetails.width?.dp ?: 120.dp,
                                 button_text = pipDetails.button_text.toString(),
                                 link = it1,
-                                position = pipDetails.position.toString()
+                                position = pipDetails.position.toString(),
+                                onButtonClick = {
+                                    // Track click event when the button is clicked
+                                    campaign?.id?.let { campaignId ->
+                                        trackCampaignActions(campaignId, "CLK")
+                                    }
+                                    // Then handle navigation as before
+                                    if (!isValidUrl(pipDetails.link)) {
+                                        navigateToScreen(pipDetails.link)
+                                    } else {
+                                        openUrl(pipDetails.link)
+                                    }
+                                },
+                                onExpandClick = {
+                                    // Track impression when expanding to fullscreen
+                                    campaign?.id?.let { campaignId ->
+                                        trackCampaignActions(campaignId, "IMP")
+                                    }
+                                }
                             )
                         }
                     }
@@ -632,7 +650,10 @@ object AppStorys {
                             _selectedReelIndex.emit(index)
                             _reelFullScreenVisible.emit(true)
                         }
-                    }
+                    },
+                    height = reelsDetails.styling?.thumbnailHeight?.toIntOrNull()?.dp ?: 180.dp,
+                    width = reelsDetails.styling?.thumbnailWidth?.toIntOrNull()?.dp ?: 120.dp,
+                    cornerRadius = reelsDetails.styling?.cornerRadius?.toIntOrNull()?.dp ?: 12.dp
                 )
 
                 if (visibility) {
@@ -689,6 +710,7 @@ object AppStorys {
                 }
 
                 FullScreenVideoScreen(
+                    reelsDetails = reelsDetails,
                     reels = reelsDetails.reels,
                     likedReels = likedReels,
                     startIndex = selectedReelIndex,

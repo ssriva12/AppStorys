@@ -211,9 +211,9 @@ data class CsatFeedbackPostRequest(
 
 data class ReelsDetails(
     val id: String?,
-    val reels: List<Reel>?
+    val reels: List<Reel>?,
+    val styling: ReelStyling?
 )
-
 
 data class Reel(
     val id: String?,
@@ -224,6 +224,16 @@ data class Reel(
     val likes: Int?,
     val thumbnail: String?,
     val link: String?
+)
+
+data class ReelStyling(
+    val ctaBoxColor: String?,
+    val cornerRadius: String?,
+    val ctaTextColor: String?,
+    val thumbnailWidth: String?,
+    val likeButtonColor: String?,
+    val thumbnailHeight: String?,
+    val descriptionTextColor: String?
 )
 
 data class TooltipsDetails(

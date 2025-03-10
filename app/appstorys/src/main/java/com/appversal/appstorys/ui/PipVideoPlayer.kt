@@ -45,7 +45,9 @@ internal fun PipVideo(
     button_text: String,
     position: String?,
     link: String,
-    onClose: () -> Unit
+    onClose: () -> Unit,
+    onButtonClick: () -> Unit,
+    onExpandClick: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val density = LocalDensity.current.density
@@ -119,7 +121,8 @@ internal fun PipVideo(
             },
             onClose = onClose,
             button_text = button_text,
-            link = link
+            link = link,
+            onButtonClick = onButtonClick
         )
     }
 
@@ -136,6 +139,7 @@ internal fun PipVideo(
                         pipSize = coordinates.size
                     }
                     .clickable {
+                        onExpandClick()
                         isFullScreen = true
                         // Pause PIP player when going fullscreen
                         pipPlayer.pause()
@@ -207,6 +211,7 @@ internal fun PipVideo(
                             .size(24.dp)
                             .background(Color.Black.copy(alpha = 0.5f), CircleShape)
                             .clickable {
+                                onExpandClick()
                                 isFullScreen = true
                                 // Pause PIP player when going fullscreen
                                 pipPlayer.pause()
@@ -280,7 +285,8 @@ fun FullScreenVideoDialog(
     onDismiss: () -> Unit,
     button_text: String?,
     link: String?,
-    onClose: () -> Unit
+    onClose: () -> Unit,
+    onButtonClick: () -> Unit
 ) {
     val context = LocalContext.current
     var isMuted by remember { mutableStateOf(false) }
@@ -391,19 +397,20 @@ fun FullScreenVideoDialog(
                 }
 
                 // Bottom-center Click Button
-                Button(
-                    onClick = {
-                        if (link != null) {
-                            uriHandler.openUri(link)
-                        }
-                    },
-                    modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .padding(16.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color.White)
-                ) {
-                    Text(text = button_text.toString(), color = Color.Black)
+                if(!button_text.isNullOrEmpty() && !link.isNullOrEmpty()){
+                    Button(
+                        onClick = {
+                            uriHandler.openUri(link);
+                            onButtonClick()
+                        },
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .padding(16.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color.White)
+                    ) {
+                        Text(text = button_text.toString(), color = Color.Black)
+                    }
                 }
             }
         }

@@ -27,6 +27,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.net.toUri
@@ -41,12 +42,20 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
 import coil.compose.rememberAsyncImagePainter
 import com.appversal.appstorys.api.Reel
+import com.appversal.appstorys.api.ReelsDetails
 import org.json.JSONArray
 import java.io.File
 
 
 @Composable
-internal fun ReelsRow(modifier: Modifier, reels: List<Reel>, onReelClick: (Int) -> Unit) {
+internal fun ReelsRow(
+    modifier: Modifier,
+    reels: List<Reel>,
+    onReelClick: (Int) -> Unit,
+    height: Dp,
+    width: Dp,
+    cornerRadius: Dp,
+) {
 
     LazyRow(
         modifier = modifier
@@ -56,10 +65,10 @@ internal fun ReelsRow(modifier: Modifier, reels: List<Reel>, onReelClick: (Int) 
         items(reels.size) { index ->
             Box(
                 modifier = Modifier
-                    .width(120.dp)
-                    .height(180.dp)
+                    .width(width)
+                    .height(height)
                     .padding(end = 10.dp)
-                    .clip(RoundedCornerShape(12.dp))
+                    .clip(RoundedCornerShape(cornerRadius))
                     .clickable { onReelClick(index) }
             ) {
                 Image(
@@ -76,6 +85,7 @@ internal fun ReelsRow(modifier: Modifier, reels: List<Reel>, onReelClick: (Int) 
 
 @Composable
 internal fun FullScreenVideoScreen(
+    reelsDetails: ReelsDetails,
     reels: List<Reel>,
     likedReels: List<String>,
     startIndex: Int,
@@ -176,7 +186,7 @@ internal fun FullScreenVideoScreen(
                                 Icon(
                                     imageVector = androidx.compose.material.icons.Icons.Default.Favorite,
                                     contentDescription = "Like",
-                                    tint = if (likedReels.contains(reels[page].id)) Color.Green else Color.White,
+                                    tint = if (likedReels.contains(reels[page].id)) Color(android.graphics.Color.parseColor(reelsDetails.styling?.likeButtonColor)) else Color.White,
                                     modifier = Modifier.size(32.dp)
                                 )
                                 Text(
@@ -241,7 +251,7 @@ internal fun FullScreenVideoScreen(
                             if (!reels[page].descriptionText.isNullOrEmpty()) {
                                 Text(
                                     text = reels[page].descriptionText ?: "",
-                                    color = Color.White,
+                                    color = Color(android.graphics.Color.parseColor(reelsDetails.styling?.descriptionTextColor)),
                                     style = MaterialTheme.typography.bodyMedium,
                                     maxLines = 2,
                                     overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
@@ -274,7 +284,7 @@ internal fun FullScreenVideoScreen(
                                     },
                                     shape = RoundedCornerShape(12.dp),
                                     colors = ButtonDefaults.buttonColors(
-                                        containerColor = Color.White
+                                        containerColor = Color(android.graphics.Color.parseColor(reelsDetails.styling?.ctaBoxColor))
                                     ),
                                     modifier = Modifier
                                         .fillMaxWidth()
@@ -282,7 +292,7 @@ internal fun FullScreenVideoScreen(
                                 ) {
                                     Text(
                                         text = reels[page].buttonText ?: "",
-                                        color = Color.Black,
+                                        color = Color(android.graphics.Color.parseColor(reelsDetails.styling?.ctaTextColor)),
                                         style = MaterialTheme.typography.labelLarge.copy(
                                             fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
                                         )
