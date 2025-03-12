@@ -1,6 +1,7 @@
 package com.example.carousal
 
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -76,6 +77,10 @@ fun MyApp() {
 fun AllCampaigns() {
     val campaignManager = App.appStorys
     val context = LocalContext.current
+
+    val bannerHeight = campaignManager.getBannerHeight()
+
+    Log.i("BannerHeight", bannerHeight.toString())
 //    var showPip by remember { mutableStateOf(true) }
     Box {
         LazyColumn(modifier = Modifier.fillMaxSize().background(Color.White), horizontalAlignment = Alignment.CenterHorizontally) {
@@ -106,6 +111,18 @@ fun AllCampaigns() {
             item {
                 campaignManager.Stories()
             }
+
+            item {
+                campaignManager.PinnedBanner(modifier = Modifier, contentScale = ContentScale.FillWidth, placeHolder = context.getDrawable(R.drawable.ic_launcher_foreground), position = null)
+            }
+
+            item {
+                Text(
+                    text = "Current banner height: $bannerHeight",
+                    modifier = Modifier.padding(vertical = 8.dp)
+                )
+            }
+
 
             item {
                 campaignManager.ToolTipWrapper(

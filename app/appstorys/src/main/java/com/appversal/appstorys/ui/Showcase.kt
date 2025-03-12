@@ -20,6 +20,7 @@ import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.boundsInParent
 import androidx.compose.ui.layout.boundsInRoot
@@ -97,19 +98,32 @@ private fun ShowcaseBackground(
     coordinates: LayoutCoordinates,
     drawHighlight: DrawScope.(LayoutCoordinates) -> Unit
 ) {
-    Canvas(
+    Box(
         modifier = Modifier
             .fillMaxSize()
-            .graphicsLayer(alpha = 0.6f)
+            .pointerInput(Unit) {
+                awaitPointerEventScope {
+                    while (true) {
+                        awaitPointerEvent() // Consumes all touch events
+                    }
+                }
+            }
     ) {
-        // Overlay
-        drawRect(
-            Color.Black.copy(alpha = 0.6f),
-            size = Size(size.width, size.height)
-        )
-        drawHighlight(coordinates)
+        Canvas(
+            modifier = Modifier
+                .fillMaxSize()
+                .graphicsLayer(alpha = 0.6f)
+        ) {
+            // Overlay
+            drawRect(
+                Color.Black.copy(alpha = 0.6f),
+                size = Size(size.width, size.height)
+            )
+            drawHighlight(coordinates)
+        }
     }
 }
+
 
 sealed interface ShowcaseHighlight {
     /**

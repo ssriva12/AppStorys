@@ -796,6 +796,16 @@ object AppStorys {
         }
     }
 
+    @Composable
+    fun getBannerHeight(): Dp {
+        val campaignsData = campaigns.collectAsStateWithLifecycle()
+        val defaultHeight = 100.dp
+
+        val campaign = campaignsData.value.firstOrNull { it.campaignType == "BAN" && it.details is BannerDetails }
+        val bannerDetails = campaign?.details as? BannerDetails
+
+        return bannerDetails?.height?.dp ?: defaultHeight
+    }
 
     @Composable
     fun PinnedBanner(
