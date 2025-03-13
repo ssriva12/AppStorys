@@ -24,7 +24,7 @@ class App : Application() {
             context = this,
             appId = "afadf960-3975-4ba2-933b-fac71ccc2002",
             accountId = "13555479-077f-445e-87f0-e6eae2e215c5",
-            userId = "cheqtest",
+            userId = "cheqtesting",
             attributes = attributes,
             navigateToScreen = { screen ->
                 println("Navigating to $screen")

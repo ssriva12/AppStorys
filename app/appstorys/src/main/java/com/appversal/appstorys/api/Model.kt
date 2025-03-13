@@ -51,7 +51,8 @@ data class ValidateAccountResponse(
 
 data class TrackScreenRequest(
     val screen_name: String?,
-    val position_list: List<String>?
+    val position_list: List<String>?,
+    val element_list: List<String>?
 )
 
 data class TrackScreenResponse(
@@ -247,6 +248,7 @@ data class TooltipsDetails(
 data class Tooltip(
     val type: String?,
     val url: String?,
+    val clickAction: String?,
     val link: String?,
     val target: String?,
     val order: Int?,

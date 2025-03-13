@@ -179,7 +179,7 @@ object AppStorys {
             if (accessToken != null) {
                 this.accessToken = accessToken
                 currentScreen = "Home Screen"
-                val campaignList = repository.getCampaigns(accessToken, currentScreen, null)
+                val campaignList = repository.getCampaigns(accessToken, currentScreen, null, null)
                 Log.d("campaignList", campaignList.toString())
 
                 if (campaignList?.isNotEmpty() == true) {
@@ -202,7 +202,7 @@ object AppStorys {
 
     }
 
-    fun getScreenCampaigns(screenName: String, positionList: List<String>) {
+    fun getScreenCampaigns(screenName: String, positionList: List<String>, elementList: List<String>) {
         try {
             coroutineScope.launch {
                 if (accessToken.isNotEmpty()) {
@@ -212,7 +212,7 @@ object AppStorys {
                         currentScreen = screenName
                     }
                     val campaignList =
-                        repository.getCampaigns(accessToken, currentScreen, positionList)
+                        repository.getCampaigns(accessToken, currentScreen, positionList, elementList)
                     Log.d("campaignList", campaignList.toString())
 
                     if (campaignList?.isNotEmpty() == true) {
@@ -406,6 +406,21 @@ object AppStorys {
         val visibleShowcase by showcaseVisible.collectAsStateWithLifecycle()
         val currentToolTipTarget by tooltipTargetView.collectAsStateWithLifecycle()
 
+        suspend fun handleNextTooltip() {
+            // Find the current tooltip index
+            val tooltips = (campaigns.value.firstOrNull { it.campaignType == "TTP" }?.details as? TooltipsDetails)?.tooltips
+            val currentIndex = tooltips?.indexOfFirst { it.id == currentToolTipTarget?.id } ?: -1
+
+            if (currentIndex >= 0 && currentIndex < (tooltips?.size ?: 0) - 1) {
+                // Show the next tooltip
+                _tooltipTargetView.emit(tooltips?.get(currentIndex + 1))
+            } else {
+                // We're at the end of the tooltips list, close the showcase
+                _tooltipTargetView.emit(null)
+                _showcaseVisible.emit(false)
+            }
+        }
+
 
         LaunchedEffect(currentToolTipTarget) {
             if (currentToolTipTarget?.target == targetKey) {
@@ -458,10 +473,15 @@ object AppStorys {
                             onClick = {
                                 coroutineScope.launch {
                                     if (!currentToolTipTarget!!.link.isNullOrEmpty()) {
-                                        if (!isValidUrl(currentToolTipTarget!!.link)) {
-                                            currentToolTipTarget!!.link?.let { navigateToScreen(it) }
+                                        if (currentToolTipTarget!!.clickAction == "deepLink") {
+                                            if (!isValidUrl(currentToolTipTarget!!.link)) {
+                                                currentToolTipTarget!!.link?.let { navigateToScreen(it) }
+                                            } else {
+                                                currentToolTipTarget!!.link?.let { openUrl(it) }
+                                            }
                                         } else {
-                                            currentToolTipTarget!!.link?.let { openUrl(it) }
+                                            // Progress to the next tooltip when clickAction is not "deepLink"
+                                            handleNextTooltip()
                                         }
 
                                         val campaign =
@@ -473,12 +493,15 @@ object AppStorys {
                                                 user_id = userId,
                                                 event_type = "CLK",
                                                 tooltip_id = currentToolTipTarget!!.id
-
                                             )
                                         )
+                                    } else {
+                                        // If there's no link at all, we should also progress to next tooltip
+                                        handleNextTooltip()
                                     }
                                 }
-                            })
+                            }
+                        )
                     }
                 }
             )

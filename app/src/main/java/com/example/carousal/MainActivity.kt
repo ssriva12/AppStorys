@@ -42,7 +42,8 @@ fun MyApp() {
 
     campaignManager.getScreenCampaigns(
         "Home Screen",
-        listOf("widget_one", "widget_three", "widget_fifty", "widget_four")
+        listOf("widget_one", "widget_three", "widget_fifty", "widget_four"),
+        listOf("button_one", "button_two")
     )
 
     var edgeToEdgePadding by remember { mutableStateOf(PaddingValues()) }
@@ -127,7 +128,7 @@ fun AllCampaigns() {
             item {
                 campaignManager.ToolTipWrapper(
                     targetModifier = Modifier,
-                    targetKey = "about_button",
+                    targetKey = "button_one",
                 ) {
                     Image(
                         modifier = it.size(60.dp),
@@ -146,12 +147,13 @@ fun AllCampaigns() {
             item{
                 campaignManager.ToolTipWrapper(
                     targetModifier = Modifier,
-                    targetKey = "home_button",
+                    targetKey = "button_two",
                 ) {
                     Button(
                         modifier = it,
                         onClick = {}
                     ) {
+                        Text("A")
                     }
                 }
             }

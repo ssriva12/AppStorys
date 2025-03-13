@@ -26,12 +26,12 @@ internal class ApiRepository(private val apiService: ApiService) {
     }
 
 
-    suspend fun getCampaigns(accessToken: String, screenName: String, positions: List<String>?): List<String>? {
+    suspend fun getCampaigns(accessToken: String, screenName: String, positions: List<String>?, elementList: List<String>?): List<String>? {
         return withContext(Dispatchers.IO) {
             when (val result = safeApiCall {
                 apiService.trackScreen(
                     token = "Bearer $accessToken",
-                    request = TrackScreenRequest(screen_name = screenName, positions)
+                    request = TrackScreenRequest(screen_name = screenName, positions, elementList)
                 ).campaigns
             }) {
                 is ApiResult.Success -> result.data
