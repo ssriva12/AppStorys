@@ -850,7 +850,6 @@ object AppStorys {
     fun PinnedBanner(
         modifier: Modifier = Modifier,
         contentScale: ContentScale = ContentScale.FillWidth,
-        staticHeight: Dp = 100.dp,
         staticWidth: Dp? = null,
         placeHolder: Drawable?,
         position: String?
@@ -908,14 +907,14 @@ object AppStorys {
 
                 },
                 shape = RoundedCornerShape(
-                    topStart = style?.topLeftBorderRadius?.dp ?: 16.dp,
-                    topEnd = style?.topRightBorderRadius?.dp ?: 16.dp,
-                    bottomEnd = style?.bottomRightBorderRadius?.dp ?: 0.dp,
-                    bottomStart = style?.bottomLeftBorderRadius?.dp ?: 0.dp
+                    topStart = style?.topLeftRadius?.dp ?: 0.dp,
+                    topEnd = style?.topRightRadius?.dp ?: 0.dp,
+                    bottomEnd = style?.bottomRightRadius?.dp ?: 0.dp,
+                    bottomStart = style?.bottomLeftRadius?.dp ?: 0.dp
                 ),
                 bottomMargin = style?.marginBottom?.dp ?: 0.dp,
                 contentScale = contentScale,
-                height = heightInDp ?: staticHeight,
+                height = heightInDp,
                 placeHolder = placeHolder
             )
         }
@@ -925,7 +924,6 @@ object AppStorys {
     fun Widget(
         modifier: Modifier = Modifier,
         contentScale: ContentScale = ContentScale.FillWidth,
-        staticHeight: Dp = 200.dp,
         staticWidth: Dp? = null,
         placeHolder: Drawable?,
         position: String?
@@ -942,10 +940,8 @@ object AppStorys {
 
             if (widgetDetails.type == "full") {
 
-
                 FullWidget(
                     modifier = modifier,
-                    staticHeight = staticHeight,
                     staticWidth = staticWidth,
                     placeHolder = placeHolder,
                     contentScale = contentScale,
@@ -955,7 +951,6 @@ object AppStorys {
             } else if (widgetDetails.type == "half") {
                 DoubleWidget(
                     modifier = modifier,
-                    staticHeight = staticHeight,
                     staticWidth = staticWidth,
                     position = position
                 )
@@ -969,7 +964,6 @@ object AppStorys {
     fun FullWidget(
         modifier: Modifier = Modifier,
         contentScale: ContentScale = ContentScale.FillWidth,
-        staticHeight: Dp = 200.dp,
         staticWidth: Dp? = null,
         placeHolder: Drawable?,
         position: String?
@@ -1025,11 +1019,11 @@ object AppStorys {
                 itemsCount = widgetDetails.widgetImages.count(),
                 width = staticWidth,
                 itemContent = { index ->
-                    widgetDetails.widgetImages[index].link?.let {
+                    widgetDetails.widgetImages[index].image?.let {
                         CarousalImage(
                             modifier = Modifier.clickable {
                                 clickEvent(
-                                    link = it,
+                                    link = widgetDetails.widgetImages[index].link,
                                     campaignId = campaign.id,
                                     widgetImageId = widgetDetails.widgetImages[index].id
                                 )
@@ -1037,7 +1031,7 @@ object AppStorys {
                             contentScale = contentScale,
                             imageUrl = widgetDetails.widgetImages[index].image ?: "",
                             placeHolder = placeHolder,
-                            height = heightInDp ?: staticHeight,
+                            height = heightInDp,
                             width = widthInDp ?: staticWidth
                         )
                     }
@@ -1049,7 +1043,6 @@ object AppStorys {
     @Composable
     fun DoubleWidget(
         modifier: Modifier = Modifier,
-        staticHeight: Dp = 200.dp,
         staticWidth: Dp? = null,
         position: String?
     ) {
@@ -1137,7 +1130,7 @@ object AppStorys {
 
                                     },
                                 imageUrl = leftImage.image,
-                                height = heightInDp ?: staticHeight
+                                height = heightInDp
                             )
 
                         }
@@ -1156,7 +1149,7 @@ object AppStorys {
                                         }
                                     },
                                 imageUrl = rightImage.image,
-                                height = heightInDp ?: staticHeight
+                                height = heightInDp
                             )
                         }
 
@@ -1200,6 +1193,14 @@ object AppStorys {
 
             if (context != null) {
                 Log.i("DeepLinkInfo", context.toString())
+            }
+
+            if (value != null) {
+                Log.i("DeepLinkInfo", value.toString())
+            }
+
+            if (type != null) {
+                Log.i("DeepLinkInfo", type.toString())
             }
             // Example deep link handling
             if (value != null) {

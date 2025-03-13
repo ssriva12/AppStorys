@@ -39,7 +39,16 @@ class MainActivity : ComponentActivity() {
 fun MyApp() {
     val context = LocalContext.current
     val campaignManager = App.appStorys
+    val app = LocalContext.current.applicationContext as App
+    val screenName by app.screenNameNavigation.collectAsState()
+    var currentScreen by remember { mutableStateOf("HomeScreen") }
 
+    LaunchedEffect(screenName) {
+        if (screenName.isNotEmpty() && currentScreen != screenName){
+            currentScreen = screenName
+            app.resetNavigation()
+        }
+    }
     campaignManager.getScreenCampaigns(
         "Home Screen",
         listOf("widget_one", "widget_three", "widget_fifty", "widget_four"),
@@ -63,11 +72,16 @@ fun MyApp() {
             }
         ) { innerPadding ->
             edgeToEdgePadding = innerPadding
-            Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
-                AllCampaigns()
+            if (currentScreen == "PayScreen"){
+                PayScreen()
+            }else{
+                Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
+                    AllCampaigns()
+                }
             }
         }
 
+        campaignManager.ShowCaseScreen()
 
     }
 
@@ -94,10 +108,21 @@ fun AllCampaigns() {
 
 }
 
-@Preview(showBackground = true)
+
+
 @Composable
-fun MyAppPreview() {
-    CarousalTheme {
-        MyApp()
+fun PayScreen() {
+
+    Box {
+
     }
+
 }
+
+//@Preview(showBackground = true)
+//@Composable
+//fun MyAppPreview() {
+//    CarousalTheme {
+//        MyApp()
+//    }
+//}

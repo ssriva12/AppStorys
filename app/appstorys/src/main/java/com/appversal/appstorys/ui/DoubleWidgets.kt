@@ -82,7 +82,7 @@ internal fun DoubleWidgets(
 }
 
 @Composable
-internal fun ImageCard(modifier: Modifier = Modifier, imageUrl: String, height: Dp = 200.dp) {
+internal fun ImageCard(modifier: Modifier = Modifier, imageUrl: String, height: Dp?) {
 
     val context = LocalContext.current
     if (isGifUrl(imageUrl)) {
@@ -113,9 +113,9 @@ internal fun ImageCard(modifier: Modifier = Modifier, imageUrl: String, height: 
             Image(
                 painter = painter,
                 contentDescription = null,
-                contentScale = ContentScale.Crop,
+                contentScale = ContentScale.FillWidth,
                 modifier = Modifier
-                    .height(height)
+                    .then(if (height != null) Modifier.height(height) else Modifier)
                     .fillMaxWidth()
             )
         }
@@ -129,9 +129,9 @@ internal fun ImageCard(modifier: Modifier = Modifier, imageUrl: String, height: 
             AsyncImage(
                 model = imageUrl,
                 contentDescription = null,
-                contentScale = ContentScale.Crop,
+                contentScale = ContentScale.FillWidth,
                 modifier = Modifier
-                    .height(height)
+                    .then(if (height != null) Modifier.height(height) else Modifier)
                     .fillMaxWidth()
             )
         }

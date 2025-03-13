@@ -44,7 +44,6 @@ class WidgetView @JvmOverloads constructor(
 
                 AppStorys.Widget(
                     contentScale = contentScale,
-                    staticHeight = staticHeight.value,
                     staticWidth = staticWidth.value,
                     placeHolder = placeHolder,
                     position = position

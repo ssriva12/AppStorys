@@ -111,10 +111,10 @@ data class BannerDetails(
 data class Styling(
     val isClose: Boolean?,
     val marginBottom: Int?,
-    val topLeftBorderRadius: Int?,
-    val topRightBorderRadius: Int?,
-    val bottomLeftBorderRadius: Int?,
-    val bottomRightBorderRadius: Int?
+    val topLeftRadius: Int?,
+    val topRightRadius: Int?,
+    val bottomLeftRadius: Int?,
+    val bottomRightRadius: Int?
 )
 
 data class WidgetDetails(

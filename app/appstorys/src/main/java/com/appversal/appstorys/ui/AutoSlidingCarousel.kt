@@ -22,6 +22,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -210,7 +211,7 @@ internal fun CarousalImage(
     modifier: Modifier = Modifier,
     imageUrl: String,
     contentScale: ContentScale = ContentScale.Crop,
-    height: Dp = 200.dp,
+    height: Dp?,
     width: Dp? = null,
     placeHolder: Drawable?
 ) {
@@ -241,7 +242,7 @@ internal fun CarousalImage(
             painter = painter,
             contentDescription = null,
             contentScale = contentScale,
-            modifier = modifier.height(height).then(if (width != null) Modifier.width(width) else Modifier)
+            modifier = modifier.then(if (height != null) Modifier.height(height) else Modifier).then(if (width != null) Modifier.width(width) else Modifier)
         )
     }else{
         val imageRequest = ImageRequest.Builder(context)
@@ -260,7 +261,7 @@ internal fun CarousalImage(
             model = imageRequest,
             contentDescription = null,
             contentScale = contentScale,
-            modifier = modifier.height(height).then(if (width != null) Modifier.width(width) else Modifier)
+            modifier = modifier.then(if (height != null) Modifier.height(height) else Modifier).then(if (width != null) Modifier.width(width) else Modifier.fillMaxWidth())
         )
     }
 

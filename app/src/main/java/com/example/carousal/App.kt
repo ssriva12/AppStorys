@@ -2,8 +2,15 @@ package com.example.carousal
 
 import android.app.Application
 import com.appversal.appstorys.AppStorys
+import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.launch
 
 class App : Application() {
+
+
+    val screenNameNavigation = MutableStateFlow("")
+    private val appScope = MainScope()
 
     override fun onCreate() {
         super.onCreate()
@@ -36,9 +43,16 @@ class App : Application() {
     }
 
 
-    //For Deeplinking with NavHost
     fun navigateToScreen(name: String) {
+        appScope.launch {
+            screenNameNavigation.emit(name)
+        }
+    }
 
+    fun resetNavigation() {
+        appScope.launch {
+            screenNameNavigation.emit("")
+        }
     }
 
     companion object {

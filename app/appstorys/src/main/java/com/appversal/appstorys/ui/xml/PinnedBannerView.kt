@@ -45,7 +45,6 @@ class PinnedBannerView @JvmOverloads constructor(
                 AppStorys.PinnedBanner(
                     modifier = Modifier.fillMaxWidth(),
                     contentScale = contentScale,
-                    staticHeight = staticHeight.value,
                     staticWidth = staticWidth.value,
                     placeHolder = placeHolder,
                     position = position

@@ -44,9 +44,9 @@ internal fun PinnedBanner(
     modifier: Modifier = Modifier,
     imageUrl: String?,
     lottieUrl: String?,
-    contentScale: ContentScale = ContentScale.Crop,
+    contentScale: ContentScale,
     width: Dp? = null,
-    height: Dp = 200.dp,
+    height: Dp?,
     bottomMargin: Dp = 0.dp,
     exitIcon: Boolean = false,
     exitUnit: () -> Unit,
@@ -74,7 +74,7 @@ internal fun PinnedBanner(
                     composition = composition,
                     iterations = LottieConstants.IterateForever,
                     modifier = Modifier
-                        .height(height)
+                        .then(if (height != null) Modifier.height(height) else Modifier)
                         .then(
                             if (width == null) {
                                 Modifier.fillMaxWidth()
@@ -115,7 +115,7 @@ internal fun PinnedBanner(
                         contentDescription = null,
                         contentScale = contentScale,
                         modifier = Modifier
-                            .height(height)
+                            .then(if (height != null) Modifier.height(height) else Modifier)
                             .then(
                                 if (width == null) {
                                     Modifier.fillMaxWidth()
@@ -144,7 +144,7 @@ internal fun PinnedBanner(
                             contentDescription = null,
                             contentScale = contentScale,
                             modifier = Modifier
-                                .height(height)
+                                .then(if (height != null) Modifier.height(height) else Modifier)
                                 .then(
                                     if (width == null) {
                                         Modifier.fillMaxWidth()
@@ -164,7 +164,7 @@ internal fun PinnedBanner(
                             contentDescription = null,
                             contentScale = contentScale,
                             modifier = Modifier
-                                .height(height)
+                                .then(if (height != null) Modifier.height(height) else Modifier)
                                 .then(
                                     if (width == null) {
                                         Modifier.fillMaxWidth()
