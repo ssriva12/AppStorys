@@ -189,7 +189,7 @@ internal fun TooltipPopup(
     ) {
         BubbleLayout(
             modifier = Modifier
-                .padding(tooltip?.styling?.highlightPadding?.toIntOrNull()?.dp ?: horizontalPadding)
+                .padding(vertical = tooltip?.styling?.highlightPadding?.toIntOrNull()?.dp ?: horizontalPadding)
                 .then(
                     Modifier.height(
                         tooltip?.styling?.tooltipDimensions?.height?.toIntOrNull()?.dp ?: 200.dp

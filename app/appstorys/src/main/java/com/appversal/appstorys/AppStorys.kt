@@ -78,8 +78,6 @@ import com.appversal.appstorys.api.ReelActionRequest
 import com.appversal.appstorys.api.ReelStatusRequest
 import com.appversal.appstorys.api.StoryGroup
 import com.appversal.appstorys.api.Tooltip
-import com.appversal.appstorys.api.TooltipDimensions
-import com.appversal.appstorys.api.TooltipStyling
 import com.appversal.appstorys.api.TooltipsDetails
 import com.appversal.appstorys.api.TrackActionStories
 import com.appversal.appstorys.api.TrackActionTooltips
@@ -87,6 +85,7 @@ import com.appversal.appstorys.ui.PipVideo
 import com.appversal.appstorys.ui.StoryAppMain
 import com.appversal.appstorys.ui.getLikedReels
 import com.appversal.appstorys.ui.saveLikedReels
+import com.appversal.appstorys.utils.toMap
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
@@ -186,10 +185,6 @@ object AppStorys {
                     val campaignsData =
                         repository.getCampaignData(accessToken, userId, campaignList, attributes)
                     Log.d("campaignsData", campaignsData.toString())
-                    Log.d(
-                        "campaignsData",
-                        campaignsData?.campaigns?.filter { it.campaignType == "TTP" }.toString()
-                    )
 
                     campaignsData?.campaigns?.let { _campaigns.emit(it) }
                     Log.d("CampaignsValue", _campaigns.toString())
@@ -202,7 +197,11 @@ object AppStorys {
 
     }
 
-    fun getScreenCampaigns(screenName: String, positionList: List<String>, elementList: List<String>) {
+    fun getScreenCampaigns(
+        screenName: String,
+        positionList: List<String>,
+        elementList: List<String>
+    ) {
         try {
             coroutineScope.launch {
                 if (accessToken.isNotEmpty()) {
@@ -212,7 +211,12 @@ object AppStorys {
                         currentScreen = screenName
                     }
                     val campaignList =
-                        repository.getCampaigns(accessToken, currentScreen, positionList, elementList)
+                        repository.getCampaigns(
+                            accessToken,
+                            currentScreen,
+                            positionList,
+                            elementList
+                        )
                     Log.d("campaignList", campaignList.toString())
 
                     if (campaignList?.isNotEmpty() == true) {
@@ -381,7 +385,7 @@ object AppStorys {
                     modifier = iconModifier.then(alignmentModifier),
                     onClick = {
                         if (campaign?.id != null && floaterDetails.link != null) {
-                            clickEvent(url = floaterDetails.link, campaignId = campaign.id)
+                            clickEvent(link = floaterDetails.link, campaignId = campaign.id)
                         }
 
                     },
@@ -408,7 +412,8 @@ object AppStorys {
 
         suspend fun handleNextTooltip() {
             // Find the current tooltip index
-            val tooltips = (campaigns.value.firstOrNull { it.campaignType == "TTP" }?.details as? TooltipsDetails)?.tooltips
+            val tooltips =
+                (campaigns.value.firstOrNull { it.campaignType == "TTP" }?.details as? TooltipsDetails)?.tooltips
             val currentIndex = tooltips?.indexOfFirst { it.id == currentToolTipTarget?.id } ?: -1
 
             if (currentIndex >= 0 && currentIndex < (tooltips?.size ?: 0) - 1) {
@@ -475,7 +480,11 @@ object AppStorys {
                                     if (!currentToolTipTarget!!.link.isNullOrEmpty()) {
                                         if (currentToolTipTarget!!.clickAction == "deepLink") {
                                             if (!isValidUrl(currentToolTipTarget!!.link)) {
-                                                currentToolTipTarget!!.link?.let { navigateToScreen(it) }
+                                                currentToolTipTarget!!.link?.let {
+                                                    navigateToScreen(
+                                                        it
+                                                    )
+                                                }
                                             } else {
                                                 currentToolTipTarget!!.link?.let { openUrl(it) }
                                             }
@@ -517,11 +526,16 @@ object AppStorys {
         val currentToolTipTarget by tooltipTargetView.collectAsStateWithLifecycle()
 
         coordinates[currentToolTipTarget?.target]?.let {
-            if (it.isAttached){
+            if (it.isAttached) {
                 ShowcaseView(
                     visible = visibleShowcase,
                     targetCoordinates = it,
-                    highlight = ShowcaseHighlight.Rectangular(cornerRadius = currentToolTipTarget?.styling?.highlightRadius?.toIntOrNull()?.dp ?: 8.dp, padding = currentToolTipTarget?.styling?.highlightPadding?.toIntOrNull()?.dp ?: 8.dp)
+                    highlight = ShowcaseHighlight.Rectangular(
+                        cornerRadius = currentToolTipTarget?.styling?.highlightRadius?.toIntOrNull()?.dp
+                            ?: 8.dp,
+                        padding = currentToolTipTarget?.styling?.highlightPadding?.toIntOrNull()?.dp
+                            ?: 8.dp
+                    )
                 )
             }
         }
@@ -554,7 +568,7 @@ object AppStorys {
 
             Box(modifier = modifier.fillMaxWidth()) {
 
-                if(showPip){
+                if (showPip) {
                     pipDetails?.large_video?.let {
                         pipDetails.link?.let { it1 ->
                             PipVideo(
@@ -825,7 +839,8 @@ object AppStorys {
         val campaignsData = campaigns.collectAsStateWithLifecycle()
         val defaultHeight = 100.dp
 
-        val campaign = campaignsData.value.firstOrNull { it.campaignType == "BAN" && it.details is BannerDetails }
+        val campaign =
+            campaignsData.value.firstOrNull { it.campaignType == "BAN" && it.details is BannerDetails }
         val bannerDetails = campaign?.details as? BannerDetails
 
         return bannerDetails?.height?.dp ?: defaultHeight
@@ -842,6 +857,11 @@ object AppStorys {
     ) {
         val campaignsData = campaigns.collectAsStateWithLifecycle()
         val disabledCampaigns = disabledCampaigns.collectAsStateWithLifecycle()
+        Log.i(
+            "BannedPinner",
+            campaignsData.value.filter { it.campaignType == "BAN" && it.details is BannerDetails }
+                .toString()
+        )
 
         Log.i("position", position.toString())
         val campaign =
@@ -870,7 +890,7 @@ object AppStorys {
             com.appversal.appstorys.ui.PinnedBanner(
                 modifier = modifier.clickable {
                     campaign?.id?.let {
-                        clickEvent(url = bannerDetails.link ?: "", campaignId = it)
+                        clickEvent(link = bannerDetails.link, campaignId = it)
                     }
                 },
                 imageUrl = bannerUrl ?: "",
@@ -915,6 +935,7 @@ object AppStorys {
             campaignsData.value.filter { it.campaignType == "WID" && it.details is WidgetDetails }
                 .firstOrNull { it.position == position }
         val widgetDetails = campaign?.details as? WidgetDetails
+        Log.i("Widget", widgetDetails.toString())
 
         if (widgetDetails != null) {
             Log.i("WidgetPics", widgetDetails.widgetImages.toString())
@@ -1008,7 +1029,7 @@ object AppStorys {
                         CarousalImage(
                             modifier = Modifier.clickable {
                                 clickEvent(
-                                    url = it,
+                                    link = it,
                                     campaignId = campaign.id,
                                     widgetImageId = widgetDetails.widgetImages[index].id
                                 )
@@ -1108,7 +1129,7 @@ object AppStorys {
                                     .clickable {
                                         if (leftImage.link != null) {
                                             clickEvent(
-                                                url = leftImage.link,
+                                                link = leftImage.link,
                                                 campaignId = campaign.id,
                                                 widgetImageId = leftImage.id
                                             )
@@ -1128,7 +1149,7 @@ object AppStorys {
                                     .clickable {
                                         if (rightImage.link != null) {
                                             clickEvent(
-                                                url = rightImage.link,
+                                                link = rightImage.link,
                                                 campaignId = campaign.id,
                                                 widgetImageId = rightImage.id
                                             )
@@ -1145,19 +1166,51 @@ object AppStorys {
         }
     }
 
-    private fun clickEvent(url: String?, campaignId: String, widgetImageId: String? = null) {
+    private fun clickEvent(link: Any?, campaignId: String, widgetImageId: String? = null) {
 
-        if (!url.isNullOrEmpty()) {
-            if (!isValidUrl(url)) {
-                navigateToScreen(url)
-            } else {
-                openUrl(url)
+        Log.i("Link", link.toString())
+        if (link != null && link is String) {
+            val url = link as String
+            if (url.isNotEmpty()) {
+                if (!isValidUrl(url)) {
+                    navigateToScreen(url)
+                } else {
+                    openUrl(url)
+                }
+
+                trackCampaignActions(campaignId, "CLK", widgetImageId)
+            }
+        } else if (link is Map<*, *>) {
+            // Handle deep link (Gson might have deserialized it into a Map)
+            val json = JSONObject(link)
+            handleDeepLink(json, campaignId, widgetImageId)
+        } else if (link is JSONObject) {
+            // If the link is already a JSONObject, process it directly
+            handleDeepLink(link, campaignId, widgetImageId)
+        }
+
+    }
+
+    private fun handleDeepLink(json: JSONObject, campaignId: String, widgetImageId: String?) {
+        try {
+
+            val value = json.optString("value", null)
+            val type = json.optString("type", null)
+            val context = json.optJSONObject("context")?.toMap()
+
+            if (context != null) {
+                Log.i("DeepLinkInfo", context.toString())
+            }
+            // Example deep link handling
+            if (value != null) {
+                navigateToScreen(value)
             }
 
             trackCampaignActions(campaignId, "CLK", widgetImageId)
+        } catch (e: Exception) {
+            Log.d("DeepLinkException", e.message.toString())
         }
     }
-
 
     private fun List<WidgetImage>.turnToPair(): List<Pair<WidgetImage, WidgetImage>> {
         if (this.isEmpty()) {

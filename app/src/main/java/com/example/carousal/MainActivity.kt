@@ -84,98 +84,12 @@ fun AllCampaigns() {
     Log.i("BannerHeight", bannerHeight.toString())
 //    var showPip by remember { mutableStateOf(true) }
     Box {
-        LazyColumn(modifier = Modifier.fillMaxSize().background(Color.White), horizontalAlignment = Alignment.CenterHorizontally) {
+        Column(modifier = Modifier.align(Alignment.Center)){
+            campaignManager.PinnedBanner(modifier = Modifier, contentScale = ContentScale.FillWidth, placeHolder = context.getDrawable(R.drawable.ic_launcher_foreground), position = null)
 
-            item {
-
-                campaignManager.Widget(
-                    placeHolder = context.getDrawable(R.drawable.ic_launcher_foreground),
-                    position = "widget_one"
-                )
-
-            }
-
-
-
-            item {
-                campaignManager.Widget(
-                    placeHolder = context.getDrawable(R.drawable.ic_launcher_foreground),
-                    position = "widget_fifty"
-                )
-            }
-
-            item {
-                campaignManager.Reels()
-            }
-
-
-            item {
-                campaignManager.Stories()
-            }
-
-            item {
-                campaignManager.PinnedBanner(modifier = Modifier, contentScale = ContentScale.FillWidth, placeHolder = context.getDrawable(R.drawable.ic_launcher_foreground), position = null)
-            }
-
-            item {
-                Text(
-                    text = "Current banner height: $bannerHeight",
-                    modifier = Modifier.padding(vertical = 8.dp)
-                )
-            }
-
-
-            item {
-                campaignManager.ToolTipWrapper(
-                    targetModifier = Modifier,
-                    targetKey = "button_one",
-                ) {
-                    Image(
-                        modifier = it.size(60.dp),
-                        painter = painterResource(id = R.drawable.icon),
-                        contentDescription = "Home Screen Top Image",
-//                        modifier = Modifier
-//                            .size(60.dp),
-                        contentScale = ContentScale.Crop
-                    )
-                }
-            }
-            item {
-                Spacer(Modifier.height(100.dp))
-            }
-
-            item{
-                campaignManager.ToolTipWrapper(
-                    targetModifier = Modifier,
-                    targetKey = "button_two",
-                ) {
-                    Button(
-                        modifier = it,
-                        onClick = {}
-                    ) {
-                        Text("A")
-                    }
-                }
-            }
-
-            item {
-                campaignManager.Widget(
-                    placeHolder = context.getDrawable(R.drawable.ic_launcher_foreground),
-                    position = "widget_four"
-                )
-            }
-
+            campaignManager.Widget(modifier = Modifier, contentScale = ContentScale.FillWidth, placeHolder = context.getDrawable(R.drawable.ic_launcher_foreground), position = null)
 
         }
-
-//        campaignManager.CSAT(modifier = Modifier.align(Alignment.BottomCenter))
-
-        campaignManager.Floater(boxModifier = Modifier.align(Alignment.BottomCenter))
-
-        campaignManager.Pip()
-
-        campaignManager.ShowCaseScreen()
-
     }
 
 }

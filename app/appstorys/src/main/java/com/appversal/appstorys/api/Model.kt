@@ -103,7 +103,7 @@ data class BannerDetails(
     val image: String?,
     val width: Int?,
     val height: Int?,
-    val link: String?,
+    val link: Any?,
     val styling: Styling?,
     val lottie_data: String?
 )
@@ -131,7 +131,7 @@ data class WidgetDetails(
 data class WidgetImage(
     val id: String?,
     val image: String?,
-    val link: String?,
+    val link: Any?,
     val order: Int?
 )
 

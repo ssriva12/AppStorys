@@ -9,6 +9,8 @@ import androidx.compose.ui.composed
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import org.json.JSONArray
+import org.json.JSONObject
 
 fun isGifUrl(url: String): Boolean {
     return url.lowercase().endsWith(".gif")
@@ -40,4 +42,46 @@ fun Modifier.noRippleClickable(onClick: () -> Unit): Modifier = composed {
 
 fun Context.pxToDp(px: Float): Dp {
     return (px / resources.displayMetrics.density).dp
+}
+
+fun JSONObject.toMap(): Map<String, Any> {
+    return try {
+        val map = mutableMapOf<String, Any>()
+        val keys = this.keys()
+        while (keys.hasNext()) {
+            val key = keys.next()
+            val value = this.opt(key)
+
+            map[key] = when (value) {
+                is JSONObject -> value.toMap()
+                is JSONArray -> value.toList()
+                else -> value ?: ""
+            }
+        }
+        map
+    } catch (e: Exception) {
+        e.printStackTrace()
+        emptyMap()
+    }
+}
+
+fun JSONArray.toList(): List<Any> {
+    return try {
+        val list = mutableListOf<Any>()
+        for (i in 0 until this.length()) {
+            val value = this.opt(i)
+
+            list.add(
+                when (value) {
+                    is JSONObject -> value.toMap()
+                    is JSONArray -> value.toList()
+                    else -> value ?: ""
+                }
+            )
+        }
+        list
+    } catch (e: Exception) {
+        e.printStackTrace()
+        emptyList()
+    }
 }
