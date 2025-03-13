@@ -516,13 +516,14 @@ object AppStorys {
         val visibleShowcase by showcaseVisible.collectAsStateWithLifecycle()
         val currentToolTipTarget by tooltipTargetView.collectAsStateWithLifecycle()
 
-        Log.i("Styling", currentToolTipTarget?.styling.toString())
         coordinates[currentToolTipTarget?.target]?.let {
-            ShowcaseView(
-                visible = visibleShowcase,
-                targetCoordinates = it,
-                highlight = ShowcaseHighlight.Rectangular(cornerRadius = currentToolTipTarget?.styling?.highlightRadius?.toIntOrNull()?.dp ?: 8.dp, padding = currentToolTipTarget?.styling?.highlightPadding?.toIntOrNull()?.dp ?: 8.dp)
-            )
+            if (it.isAttached){
+                ShowcaseView(
+                    visible = visibleShowcase,
+                    targetCoordinates = it,
+                    highlight = ShowcaseHighlight.Rectangular(cornerRadius = currentToolTipTarget?.styling?.highlightRadius?.toIntOrNull()?.dp ?: 8.dp, padding = currentToolTipTarget?.styling?.highlightPadding?.toIntOrNull()?.dp ?: 8.dp)
+                )
+            }
         }
     }
 
